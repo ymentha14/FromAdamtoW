@@ -1,4 +1,6 @@
 data/
-
+trash/
 .DS_Store
 *.pickle
+speech_clsf.ipynb
+

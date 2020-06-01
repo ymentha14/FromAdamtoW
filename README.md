@@ -21,3 +21,5 @@ Python version required >= 3.6
 Dataset:
 
 - Toxic Comment Classification Challenge
+
+command used : python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
