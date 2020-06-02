@@ -2,15 +2,18 @@
 Images classification
 """
 
+import numpy as np
 import torch
 import torch.nn as nn
 from torchvision import datasets, transforms
 import torch.nn.functional as F
 
+import helper
+
 
 class Cnn(nn.Module):
     # The network is a CNN, with one convolutional layer, dropout, and 2 fully connected layers
-    def __init__(self, dropout=0.5):
+    def __init__(self, dropout: float = 0.5):
         super(Cnn, self).__init__()
         self.conv1 = nn.Conv2d(1, 32, 5, 1)   # Kernel size of 5, TODO: it may be a good parameter to optimize with
         self.dropout1 = nn.Dropout2d(dropout)
@@ -63,3 +66,28 @@ def get_data():
         shuffle=True,
         **kwargs)
     return train_loader
+
+
+def get_scoring_function():
+    """
+    Returns the function that computes the score, given the model and the data (as a torch DataLoader).
+    In case of images_cls the scoring function is the accuracy (correct / total).
+    Returns:
+        score_func: (model: nn.Module, data: torch.utils.data.DataLoader) -> float
+    """
+    def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
+        device = helper.get_device()
+        model.eval()
+        model.to(device=device)
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data, target in data:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+                correct += pred.eq(target.view_as(pred)).sum().item()
+                total += len(data)
+        return 100. * correct / total
+
+    return accuracy

@@ -34,15 +34,15 @@ def main():
     tasks_to_evaluate = []
 
     if args.task_name == "images_cls" or args.task_name == "all":
-        task = ("images_cls", images_cls.get_model(), images_cls.get_data())
+        task = ("images_cls", images_cls.get_model(), images_cls.get_data(), images_cls.get_scoring_function())
         tasks_to_evaluate.append(task)
 
     if args.task_name == "speech_cls" or args.task_name == "all":
-        task = ("speech_cls", speech_cls.get_model(), speech_cls.get_data())
+        task = ("speech_cls", speech_cls.get_model(), speech_cls.get_data(), speech_cls.get_scoring_function())
         tasks_to_evaluate.append(task)
 
     if args.task_name == "text_cls" or args.task_name == "all":
-        task = ("text_cls", text_cls.get_model(), text_cls.get_data())
+        task = ("text_cls", text_cls.get_model(), text_cls.get_data(), text_cls.get_scoring_function())
         tasks_to_evaluate.append(task)
 
     if len(tasks_to_evaluate) == 0:
@@ -59,7 +59,7 @@ def main():
         # Grid Search Mode
         if len(args.params_file) != len(tasks_to_evaluate):
             raise ValueError("Number of files non coherent with number of tasks to evaluate.")
-        for param_file, (task_name, task_model, task_data) in zip(args.params_file, tasks_to_evaluate):
+        for param_file, (task_name, task_model, task_data, scoring_func) in zip(args.params_file, tasks_to_evaluate):
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
             combinations = helper.get_params_combinations(param_file)
@@ -71,14 +71,17 @@ def main():
                     if args.verbose:
                         print(f"\nTesting {optim} with {param}")
                     # implement the tester
-                    tester = Tester(args, task_data, task_model, helper.STR2OPTIM[optim], param)
+                    tester = Tester(args, task_data, task_model, helper.STR2OPTIM[optim], param, scoring_func)
                     # run it with the current parameters
                     tester.run()
                     # and log its result
                     tester.log(f"./results/{args.task_name}_gridsearch.json")
+                    if args.verbose:
+                        # The score should be computed actually during the cross validation!
+                        print("The score is {}".format(tester.score()))
     else:
         # rerun the best parameters
-        for (task_name, task_model, task_data) in tasks_to_evaluate:
+        for (task_name, task_model, task_data, scoring_func) in tasks_to_evaluate:
             print("=" * 60 + f"\nRunning {args.num_runs} tests for task : {task_name}")
             # TODO: define the optimizer here
             

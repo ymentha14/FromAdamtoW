@@ -3,6 +3,7 @@ import json
 from copy import copy
 from datetime import datetime
 from pathlib import Path
+from typing import Callable
 
 import torch
 import torch.nn as nn
@@ -17,7 +18,8 @@ class Tester:
     """
 
     def __init__(self, args: object, task_data: torch.utils.data.DataLoader,
-                 task_model: nn.Module, optim: torch.optim, param: object):
+                 task_model: nn.Module, optim: torch.optim, param: object,
+                 scoring_func: Callable[[nn.Module, torch.utils.data.DataLoader], float]):
         """Initialize the class Tester
         
         Args:
@@ -32,6 +34,8 @@ class Tester:
         self.model_constructor = task_model
         self.optim = optim
         self.param = param
+        self.scoring_func = scoring_func
+        self.device = h.get_device()
 
     def train(self):
         """
@@ -44,6 +48,8 @@ class Tester:
 
         # 1. Construct again the model
         self.model = self.model_constructor()
+        # Send it to the correct device
+        self.model = self.model.to(device=self.device)  # Send model to device
 
         # 3. Effectively train the model
         self._run_all_epochs()
@@ -93,16 +99,9 @@ class Tester:
         self.losses = []
         self.f1s = []
 
-        # Check if cuda is available, in case it is send it to the correct device (GPU or CPU)
-        use_cuda = torch.cuda.is_available()
-        if self.args.verbose:
-            print("Cuda is available {}".format(use_cuda))
-        device = torch.device("cuda" if use_cuda else "cpu")   # specify the device as GPU or CPU, according to use_cuda
-        self.model = self.model.to(device=device)  # Send model to device
-
         for epoch in range(num_epochs):
             for x_batch, y_batch in self.task_data:
-                x_batch, y_batch = x_batch.to(device), y_batch.to(device)   # Send data to device as tensors
+                x_batch, y_batch = x_batch.to(self.device), y_batch.to(self.device)   # Send data to device as tensors
                 output_batch = self.model(x_batch)
                 loss = criterion(output_batch, y_batch)
                 self.model.zero_grad()
@@ -124,3 +123,6 @@ class Tester:
         
     def run(self):
         return self.train()
+
+    def score(self) -> float:
+        return self.scoring_func(self.model, self.task_data)

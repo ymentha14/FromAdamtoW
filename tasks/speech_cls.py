@@ -167,6 +167,16 @@ def get_data():
     dataloader = DataLoader(dataset, batch_size=20, shuffle=True, num_workers=1)
     return dataloader
 
+
+def get_scoring_function():
+    """
+    Returns the function that computes the score, given the model and the data.
+    Returns:
+        score_func: (model: nn.Module, data: torch.utils.data.DataLoader) -> float
+    """
+    raise NotImplementedError
+
+
 if __name__ == '__main__':
     model = get_model()
     dataloader = get_data()

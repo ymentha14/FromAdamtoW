@@ -31,6 +31,15 @@ def get_model():
     return SimpleLSTM()
 
 
+def get_scoring_function():
+    """
+    Returns the function that computes the score, given the model and the data.
+    Returns:
+        score_func: (model: nn.Module, data: torch.utils.data.DataLoader) -> float
+    """
+    raise NotImplementedError
+
+
 """
 Load data
 """
