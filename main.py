@@ -72,13 +72,11 @@ def main():
                         print(f"\nTesting {optim} with {param}")
                     # implement the tester
                     tester = Tester(args, task_data, task_model, helper.STR2OPTIM[optim], param, scoring_func)
-                    # run it with the current parameters
-                    tester.run()
+                    # Run the cross validation phase
+                    tester.cross_validation()
                     # and log its result
                     tester.log(f"./results/{args.task_name}_gridsearch.json")
-                    if args.verbose:
-                        # The score should be computed actually during the cross validation!
-                        print("The score is {}".format(tester.score()))
+
     else:
         # rerun the best parameters
         for (task_name, task_model, task_data, scoring_func) in tasks_to_evaluate:
