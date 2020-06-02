@@ -3,6 +3,7 @@ import json
 import itertools
 from copy import copy
 
+import torch
 import torch.optim as optim
 
 STR2OPTIM = {'Adam': optim.Adam,
@@ -138,3 +139,8 @@ def adapt_params(params):
         del corr_params['beta1'], corr_params['beta2']
     return corr_params
 
+
+def get_device():
+    use_cuda = torch.cuda.is_available()
+    device = torch.device("cuda" if use_cuda else "cpu")
+    return device
