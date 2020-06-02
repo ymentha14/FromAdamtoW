@@ -13,13 +13,13 @@ from pathlib import Path
 from IPython.core.debugger import set_trace
 
 
-
 class Tester:
     """
     A tester needs to be run for one task: that is, for each dataset,optimizer and hyperparameter combination.
     """
 
-    def __init__(self,args,task_data,task_model,optim,param):
+    def __init__(self, args: object, task_data: torch.utils.data.DataLoader,
+                 task_model: nn.Module, optim: torch.optim, param: object):
         """Initialize the class Tester
         
         Args:
@@ -29,7 +29,6 @@ class Tester:
             optim: torch optimizer used
             param: dict of parameters for the model/dataset/optimizer combination
         """
-
         self.args = args
         self.task_data = task_data
         self.model_constructor = task_model
@@ -61,28 +60,27 @@ class Tester:
 
         return train_time
     
-    def log(self,log_path):
+    def log(self, log_path: str):
         """append the scores of the current run to the json in log_path"""
         
         log_path_posix = Path(log_path)
         if not log_path_posix.exists():
-            with open(log_path,'w') as f: 
+            with open(log_path, 'w') as f:
                 json.dump({}, f, indent=4) 
         date = datetime.now().strftime("%m_%d_%y-%H_%M")
         log_data = copy(self.param)
         log_data['optim'] = str(self.optim)
         log_data['losses'] = self.losses
         log_data['train_time'] = self.train_time
-        new_data = {date:log_data}
+        new_data = {date: log_data}
         #old_log = json.loads(log_path)
         
-        with open(log_path,'r') as f: 
+        with open(log_path, 'r') as f:
             old_log = json.load(f)
         
         old_log.update(new_data)
-        with open(log_path,'w') as f: 
+        with open(log_path, 'w') as f:
             json.dump(old_log, f, indent=4) 
-        
 
     def _run_all_epochs(self):
         """
@@ -93,14 +91,22 @@ class Tester:
         # hard-coded criterion since we only use cross-entropy loss
         criterion = nn.CrossEntropyLoss()
         
-        optimizer = self.optim(self.model.parameters(),**h.adapt_params(self.param))
+        optimizer = self.optim(self.model.parameters(), **h.adapt_params(self.param))
         self.losses = []
         self.f1s = []
+
+        # Check if cuda is available, in case it is send it to the correct device (GPU or CPU)
+        use_cuda = torch.cuda.is_available()
+        if self.args.verbose:
+            print("Cuda is available {}".format(use_cuda))
+        device = torch.device("cuda" if use_cuda else "cpu")   # specify the device as GPU or CPU, according to use_cuda
+        self.model = self.model.to(device=device)  # Send model to device
+
         for epoch in range(num_epochs):
-            
-            for X_batch,y_batch in self.task_data:
-                output_batch = self.model(X_batch)
-                loss = criterion(output_batch,y_batch)
+            for x_batch, y_batch in self.task_data:
+                x_batch, y_batch = x_batch.to(device), y_batch.to(device)   # Send data to device as tensors
+                output_batch = self.model(x_batch)
+                loss = criterion(output_batch, y_batch)
                 self.model.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -108,7 +114,6 @@ class Tester:
                 #TODO compute F1 score in here
                 #f1 = ...
                 #f1s.append(f1)
-                
 
             if self.args.verbose:
                 print(
