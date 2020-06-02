@@ -3,4 +3,5 @@ trash/
 .DS_Store
 *.pickle
 speech_clsf.ipynb
-
+.ipynb_checkpoints
+.idea
