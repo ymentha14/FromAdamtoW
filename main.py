@@ -75,7 +75,7 @@ def main():
                     # Run the cross validation phase
                     tester.cross_validation()
                     # and log its result
-                    tester.log(f"./results/{args.task_name}_gridsearch.json")
+                    # tester.log(f"./results/{args.task_name}_gridsearch.json")
 
     else:
         # rerun the best parameters
