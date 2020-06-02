@@ -21,3 +21,7 @@ Python version required >= 3.6
 Dataset:
 
 - Toxic Comment Classification Challenge
+
+**IDEA**
+
+- Study the relation with EarlyStopping ?
