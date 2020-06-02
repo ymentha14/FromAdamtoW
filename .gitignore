@@ -5,3 +5,4 @@ trash/
 speech_clsf.ipynb
 .ipynb_checkpoints
 .idea
+__pycache__/
