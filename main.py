@@ -22,8 +22,6 @@ from IPython.core.debugger import set_trace
 from tester import Tester
 
 
-
-
 def main():
     # setting-up logs
     LOG_DIRECTORY = Path("log")
@@ -43,7 +41,6 @@ def main():
     args = helper.parse_arguments()
 
     tasks_to_evaluate = []
-    
 
     if args.task_name == "images_cls" or args.task_name == "all":
         task = ("images_cls", images_cls.get_model(), images_cls.get_data())
@@ -68,22 +65,22 @@ def main():
     results = {}
 
     if args.cross_validation:
-        # Grid Search Modef
-        if (len(args.params_file) != len(tasks_to_evaluate)):
-                raise ValueError("Number of files non coherent with number of tasks to evaluate.")
-        for param_file,(task_name, task_model, task_data) in zip(args.params_file,tasks_to_evaluate):
+        # Grid Search Mode
+        if len(args.params_file) != len(tasks_to_evaluate):
+            raise ValueError("Number of files non coherent with number of tasks to evaluate.")
+        for param_file, (task_name, task_model, task_data) in zip(args.params_file, tasks_to_evaluate):
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
             combinations = helper.get_params_combinations(param_file)
             # start of the grid search
             if args.verbose:
                 print("Testing {} combinations in total".format(sum([len(i) for i in combinations.values()])))
-            for optim,params in combinations.items():
+            for optim, params in combinations.items():
                 for param in params:
                     if args.verbose:
                         print(f"\nTesting {optim} with {param}")
                     # implement the tester
-                    tester = Tester(args,task_data,task_model,helper.STR2OPTIM[optim],param)
+                    tester = Tester(args, task_data, task_model, helper.STR2OPTIM[optim], param)
                     # run it with the current parameters
                     tester.run()
                     # and log its result
@@ -92,16 +89,16 @@ def main():
         # rerun the best parameters
         for (task_name, task_model, task_data) in tasks_to_evaluate:
             print("=" * 60 + f"\nRunning {args.num_runs} tests for task : {task_name}")
-            #TODO: deifne the optimizer here
+            # TODO: define the optimizer here
             
-            #results[task_name] = Tester(args, task_name, task_model, task_data).run()
-            if (args.optimizer == 'all'):
-                optims = list(h.STR2OPTIM.values())                    
+            # results[task_name] = Tester(args, task_name, task_model, task_data).run()
+            if args.optimizer == 'all':
+                optims = list(helper.STR2OPTIM.values())
             else:
                 # single optimizer
                 optims = [helper.STR2OPTIM[args.optimizer]]
             for optim in optims:
-                tester = Tester(args,task_data,task_model,optim,params)
+                tester = Tester(args, task_data, task_model, optim, params)
                 tester.run()
                 tester.log("./results/")
 
