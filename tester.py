@@ -1,16 +1,14 @@
-import logging
 import time
-import math
+import json
+from copy import copy
 from datetime import datetime
+from pathlib import Path
 
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from copy import copy
+
 import helper as h
-import json
-from pathlib import Path
-from IPython.core.debugger import set_trace
 
 
 class Tester:

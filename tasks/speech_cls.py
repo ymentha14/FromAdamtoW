@@ -1,20 +1,11 @@
-import os
 from pathlib import Path
 from scipy.io import wavfile
 import numpy as np
-import pickle
-
-import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
-
-from IPython.display import clear_output
-from IPython.core.debugger import set_trace
-
 from speechpy.feature import mfcc
-from datetime import datetime
 
 # useful dics to convert labels from german to english
 DE2EN = {'W':'A', #Wut-Anger

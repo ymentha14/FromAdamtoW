@@ -4,21 +4,12 @@
 MAIN
 """
 
-import argparse
 import helper
-import json
-
-import itertools
-
-import logging
 from pathlib import Path
-import pickle
 
 from tasks import images_cls
 from tasks import speech_cls
 from tasks import text_cls
-from IPython.core.debugger import set_trace
-
 from tester import Tester
 
 
