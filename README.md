@@ -22,6 +22,10 @@ Dataset:
 
 - Toxic Comment Classification Challenge
 
+<<<<<<< HEAD
 **IDEA**
 
 - Study the relation with EarlyStopping ?
+=======
+command used : python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
+>>>>>>> e608ac3d2cf5fc69bfa536b96c244720f63dfdc9
