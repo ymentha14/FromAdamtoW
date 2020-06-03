@@ -49,7 +49,7 @@ class Tester:
         self.scoring_func = scoring_func
         self.device = h.get_device()
 
-        self.patience = 10
+        self.patience = 10      # TODO: Is it OK?
         self.batch_size = 64  # TODO: What do we want to do with it?
 
     def train(self):
@@ -148,6 +148,38 @@ class Tester:
                 losses.append(criterion(pred, y_batch))
             return np.sum(np.array(losses))
 
+    def cross_validation_train_test_split(self, k: int, train_dataset: torch.utils.data.IterableDataset, cv: int):
+        """
+        Splits the dataset into 2 partitions:
+        one goes from len(train_dataset) * (split * cv) to len(train_dataset) * (split * (cv+1)) (the validation one)
+        and the other takes all the rest (the training one).
+        Args:
+            k: k-fold cross validation parameter
+            train_dataset: the dataset to split
+            cv: the cross validation iterator (from 0 to k-1)
+        Returns:
+            A training and a validation data loader
+        """
+        split = 1 / k
+        indices = np.random.permutation(len(train_dataset))
+        lower_extreme = math.floor(len(train_dataset) * (split * cv))
+        higher_extreme = math.floor(len(train_dataset) * (split * (cv + 1)))
+        train_indices_cv = np.array(indices[lower_extreme:higher_extreme])
+        # Merge the complement of train_indices_cv with respect of train_indices
+        test_indices_cv = np.concatenate(
+            [indices[:lower_extreme], indices[higher_extreme:]]
+        )
+
+        train_dataset_cv = Subset(train_dataset, train_indices_cv)
+        test_dataset_cv = Subset(train_dataset, test_indices_cv)
+        train_loader_cv = torch.utils.data.DataLoader(
+            train_dataset_cv, batch_size=self.batch_size
+        )
+        test_loader_cv = torch.utils.data.DataLoader(
+            test_dataset_cv, batch_size=self.batch_size
+        )
+        return train_loader_cv, test_loader_cv
+
     def cross_validation(self, k: int = 5, test_split: float = 0.1):
         """
         Performs k-fold cross validation on the data provided, with the model and optimizer specified.
@@ -181,25 +213,7 @@ class Tester:
         criterion = nn.CrossEntropyLoss()
         for cv in range(k):
             # Perform another test-train split on the train_dataset
-            split = 1 / k
-            indices = np.random.permutation(len(train_dataset))
-            lower_extreme = math.floor(len(train_dataset) * (split * cv))
-            higher_extreme = math.floor(len(train_dataset) * (split * (cv + 1)))
-            train_indices_cv = np.array(indices[lower_extreme:higher_extreme])
-            # Merge the complement of train_indices_cv with respect of train_indices
-            # if len(indices[:lower_extreme]) and len(indices[higher_extreme:]):
-            test_indices_cv = np.concatenate(
-                [indices[:lower_extreme], indices[higher_extreme:]]
-            )
-
-            train_dataset_cv = Subset(train_dataset, train_indices_cv)
-            test_dataset_cv = Subset(train_dataset, test_indices_cv)
-            train_loader_cv = torch.utils.data.DataLoader(
-                train_dataset_cv, batch_size=self.batch_size
-            )
-            test_loader_cv = torch.utils.data.DataLoader(
-                test_dataset_cv, batch_size=self.batch_size
-            )
+            train_loader_cv, test_loader_cv = self.cross_validation_train_test_split(k, train_dataset, cv)
 
             # Recreate the model (otherwise it would not start training from scratch)
             self.model = self.model_constructor()
@@ -215,9 +229,15 @@ class Tester:
             for epoch in range(num_epochs):
                 # Train for one epoch, and record losses and accuracy
                 self._run_one_epoch(train_loader_cv, criterion, optimizer)
-                train_losses.append(self.compute_loss(self.model, train_loader_cv, criterion))
-                val_losses.append(self.compute_loss(self.model, test_loader_cv, criterion))
+                train_losses.append(self.compute_loss(self.model, train_loader_cv, criterion).item())
+                val_loss = self.compute_loss(self.model, test_loader_cv, criterion)
+                val_losses.append(val_loss.item())
                 val_accuracies.append(self.score(self.model, test_loader_cv))
+                early_stopping(val_loss.item(), self.model)
+                if early_stopping.early_stop:
+                    print("Early stopping")
+                    break
+
             print("Train losses: " + str(train_losses))
             print("Validation losses: " + str(val_losses))
             print("Validation accuracies: " + str(val_accuracies))
