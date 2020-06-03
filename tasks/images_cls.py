@@ -15,7 +15,9 @@ class Cnn(nn.Module):
     # The network is a CNN, with one convolutional layer, dropout, and 2 fully connected layers
     def __init__(self, dropout: float = 0.5):
         super(Cnn, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, 5, 1)   # Kernel size of 5, TODO: it may be a good parameter to optimize with
+        self.conv1 = nn.Conv2d(
+            1, 32, 5, 1
+        )  # Kernel size of 5, TODO: it may be a good parameter to optimize with
         self.dropout1 = nn.Dropout2d(dropout)
         # The size is computed as 32 (filters) * 24 (height after applying kernel) * 24 (width after applying kernel)
         self.fc1 = nn.Linear(18432, 500)
@@ -53,18 +55,25 @@ def get_data():
     """
     # Initialize the training loader, use special parameters if cuda is available.
     use_cuda = torch.cuda.is_available()
-    kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+    kwargs = {"num_workers": 1, "pin_memory": True} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
-        datasets.MNIST('data',
-                       train=True,
-                       download=True,
-                       transform=transforms.Compose([
-                           transforms.ToTensor(),
-                           transforms.Normalize((0.1307,), (0.3081,))  # Parameters advised by Torch documentation
-                       ])),
+        datasets.MNIST(
+            "data",
+            train=True,
+            download=True,
+            transform=transforms.Compose(
+                [
+                    transforms.ToTensor(),
+                    transforms.Normalize(
+                        (0.1307,), (0.3081,)
+                    ),  # Parameters advised by Torch documentation
+                ]
+            ),
+        ),
         batch_size=64,
         shuffle=True,
-        **kwargs)
+        **kwargs
+    )
     return train_loader
 
 
@@ -75,6 +84,7 @@ def get_scoring_function():
     Returns:
         score_func: (model: nn.Module, data: torch.utils.data.DataLoader) -> float
     """
+
     def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
         device = helper.get_device()
         model.eval()
@@ -85,9 +95,11 @@ def get_scoring_function():
             for data, target in data:
                 data, target = data.to(device), target.to(device)
                 output = model(data)
-                pred = output.argmax(dim=1, keepdim=True)  # get the index of the max log-probability
+                pred = output.argmax(
+                    dim=1, keepdim=True
+                )  # get the index of the max log-probability
                 correct += pred.eq(target.view_as(pred)).sum().item()
                 total += len(data)
-        return 100. * correct / total
+        return 100.0 * correct / total
 
     return accuracy

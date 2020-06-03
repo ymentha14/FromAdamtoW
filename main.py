@@ -34,44 +34,74 @@ def main():
     tasks_to_evaluate = []
 
     if args.task_name == "images_cls" or args.task_name == "all":
-        task = ("images_cls", images_cls.get_model(), images_cls.get_data(), images_cls.get_scoring_function())
+        task = (
+            "images_cls",
+            images_cls.get_model(),
+            images_cls.get_data(),
+            images_cls.get_scoring_function(),
+        )
         tasks_to_evaluate.append(task)
 
     if args.task_name == "speech_cls" or args.task_name == "all":
-        task = ("speech_cls", speech_cls.get_model(), speech_cls.get_data(), speech_cls.get_scoring_function())
+        task = (
+            "speech_cls",
+            speech_cls.get_model(),
+            speech_cls.get_data(),
+            speech_cls.get_scoring_function(),
+        )
         tasks_to_evaluate.append(task)
 
     if args.task_name == "text_cls" or args.task_name == "all":
-        task = ("text_cls", text_cls.get_model(), text_cls.get_data(), text_cls.get_scoring_function())
+        task = (
+            "text_cls",
+            text_cls.get_model(),
+            text_cls.get_data(),
+            text_cls.get_scoring_function(),
+        )
         tasks_to_evaluate.append(task)
 
     if len(tasks_to_evaluate) == 0:
         raise ValueError(
             "task_name must be either 'images_cls', 'speech_cls', 'text_cls' or 'all'."
         )
-        
+
     # either the exploration phase or evaluation phase
-    #assert((args.optimizer is None) != (args.param_file is None))
+    # assert((args.optimizer is None) != (args.param_file is None))
 
     results = {}
 
     if args.cross_validation:
         # Grid Search Mode
         if len(args.params_file) != len(tasks_to_evaluate):
-            raise ValueError("Number of files non coherent with number of tasks to evaluate.")
-        for param_file, (task_name, task_model, task_data, scoring_func) in zip(args.params_file, tasks_to_evaluate):
+            raise ValueError(
+                "Number of files non coherent with number of tasks to evaluate."
+            )
+        for param_file, (task_name, task_model, task_data, scoring_func) in zip(
+            args.params_file, tasks_to_evaluate
+        ):
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
             combinations = helper.get_params_combinations(param_file)
             # start of the grid search
             if args.verbose:
-                print("Testing {} combinations in total".format(sum([len(i) for i in combinations.values()])))
+                print(
+                    "Testing {} combinations in total".format(
+                        sum([len(i) for i in combinations.values()])
+                    )
+                )
             for optim, params in combinations.items():
                 for param in params:
                     if args.verbose:
                         print(f"\nTesting {optim} with {param}")
                     # implement the tester
-                    tester = Tester(args, task_data, task_model, helper.STR2OPTIM[optim], param, scoring_func)
+                    tester = Tester(
+                        args,
+                        task_data,
+                        task_model,
+                        helper.STR2OPTIM[optim],
+                        param,
+                        scoring_func,
+                    )
                     # Run the cross validation phase
                     tester.cross_validation()
                     # and log its result
@@ -82,9 +112,9 @@ def main():
         for (task_name, task_model, task_data, scoring_func) in tasks_to_evaluate:
             print("=" * 60 + f"\nRunning {args.num_runs} tests for task : {task_name}")
             # TODO: define the optimizer here
-            
+
             # results[task_name] = Tester(args, task_name, task_model, task_data).run()
-            if args.optimizer == 'all':
+            if args.optimizer == "all":
                 optims = list(helper.STR2OPTIM.values())
             else:
                 # single optimizer
