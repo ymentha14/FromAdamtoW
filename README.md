@@ -20,7 +20,8 @@ Python version required >= 3.6
 
 **TODO**
 
-- Early stopping ? 
+- Early stopping ?
+- Scheduler ? https://pytorch.org/docs/master/_modules/torch/optim/lr_scheduler.html#StepLR
 
 
 **Text classification**
@@ -33,4 +34,3 @@ Dataset:
 
 - Study the relation with EarlyStopping ?
 command used : python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
-

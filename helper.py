@@ -26,7 +26,7 @@ def parse_arguments():
         "--params_file",
         nargs="+",
         type=str,
-        default=None,
+        default="./params/params.json",
         help="Parameter file containing all different settings to conduct a GridSearch for the tasks. "
         "Provide 3 of them if you run all for the grid search, 1 otherwise.",
     )

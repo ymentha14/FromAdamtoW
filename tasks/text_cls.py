@@ -1,34 +1,107 @@
 """
-Images classification
+Text classification
 """
 
 import torch
 import torch.nn as nn
 
+import torchtext
+from torchtext.datasets import text_classification
+from torch.utils.data import DataLoader
 
-class SimpleLSTM(nn.Module):
+BATCH_SIZE = 16
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+
+class TextClassifier(nn.Module):
     def __init__(
-        self, embedding_dim=300, hidden_dim=100, vocab_size=3000, output_size=10
+        self,
+        vocab_size=95812,  # TODO len(train_dataset.get_vocab())
+        embed_dim=64,
+        num_classes=4,
+        hidden_dim=8,
+        n_layers=1,
+        bidirectional=True,
+        dropout=0.1,
+        rnn_type="lstm",
+        with_rnn=False,
     ):
-        super(SimpleLSTM, self).__init__()
+
+        super(TextClassifier, self).__init__()
+
+        self.embedding = nn.Embedding(vocab_size, embed_dim)
+
+        if rnn_type == "lstm":
+            self.rnn = nn.LSTM(
+                embed_dim,
+                hidden_dim,
+                num_layers=2,
+                bidirectional=True,
+                dropout=0.1,
+                batch_first=True,
+            )
+        else:
+            self.rnn = nn.GRU(
+                embed_dim,
+                hidden_dim,
+                num_layers=n_layers,
+                bidirectional=bidirectional,
+                dropout=dropout,
+                batch_first=True,
+            )
+
+        self.fc_with_rnn = nn.Linear(hidden_dim * 2, num_classes)
+        self.fc_with_embed = nn.Linear(embed_dim, num_classes)
+
         self.hidden_dim = hidden_dim
 
-        self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
+        self.dropout = nn.Dropout(dropout)
 
-        self.lstm = nn.LSTM(embedding_dim, hidden_dim)
+        self.with_rnn = with_rnn
 
-        self.out = nn.Linear(hidden_dim, output_size)
+        self.init_weights()
 
-    def forward(self, sentence):
-        embedding = self.word_embeddings(sentence)
+    def init_weights(self):
+        initrange = 0.5
+        self.embedding.weight.data.uniform_(-initrange, initrange)
 
-        lstm_out, _ = self.lstm(embeds.view(len(sentence), 1, -1))
+        self.fc_with_rnn.weight.data.uniform_(-initrange, initrange)
+        self.fc_with_rnn.bias.data.zero_()
 
-        return self.out(lstm_out.view(len(sentence), -1))
+        self.fc_with_embed.weight.data.uniform_(-initrange, initrange)
+        self.fc_with_embed.bias.data.zero_()
+
+    def forward(self, x_batch):
+
+        # (text, text_lengths) = x_batch
+
+        text_lengths = x_batch[:, 0]
+        text = x_batch[:, 1:]
+
+        # text = [batch size, sent_length]
+        embedded = self.embedding(text)
+
+        if self.with_rnn:
+            packed_embedded = nn.utils.rnn.pack_padded_sequence(
+                embedded, text_lengths, batch_first=True, enforce_sorted=False
+            )
+
+            packed_output, (hidden, cell) = self.rnn(packed_embedded)
+
+            hidden = torch.cat((hidden[-2, :, :], hidden[-1, :, :]), dim=1)
+
+            out = self.fc_with_rnn(hidden)
+
+        else:
+            embedded = embedded.mean(dim=1)
+            out = self.fc_with_embed(embedded)
+
+        return out
 
 
 def get_model():
-    return SimpleLSTM()
+    return TextClassifier
 
 
 def get_scoring_function():
@@ -37,13 +110,67 @@ def get_scoring_function():
     Returns:
         score_func: (model: nn.Module, data: torch.utils.data.DataLoader) -> float
     """
-    raise NotImplementedError
+
+    def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
+        device = helper.get_device()
+        model.eval()
+        model.to(device=device)
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data, target in data:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                pred = output.argmax(
+                    dim=1, keepdim=True
+                )  # get the index of the max log-probability
+                correct += pred.eq(target.view_as(pred)).sum().item()
+                total += len(data)
+
+        return 100.0 * correct / total
+
+    return accuracy
 
 
 """
 Load data
 """
 
+import torch.utils.data as tud
+
+
+def generate_batch(batch):
+
+    sequences = [seq for (label, seq) in batch]
+    pad_sequences = torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
+    seq_length = torch.tensor([len(seq) for (label, seq) in batch]).reshape(-1, 1)
+    labels = torch.tensor([label for (label, seq) in batch])
+
+    x = torch.cat([seq_length, pad_sequences], dim=1)
+
+    # return (pad_sequences, seq_length), labels
+    return x, labels
+
 
 def get_data():
-    return []
+
+    #
+    NGRAMS = 1
+
+    # create data folder in case it does not exist
+    import os
+
+    if not os.path.isdir("./.data"):
+        os.mkdir("./.data")
+
+    train_dataset, test_dataset = text_classification.DATASETS["AG_NEWS"](
+        root="./.data", ngrams=NGRAMS, vocab=None
+    )
+
+    # single_dataset = tud.ConcatDataset([train_dataset, test_dataset])
+
+    dataloader = DataLoader(
+        train_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=generate_batch
+    )
+
+    return dataloader
