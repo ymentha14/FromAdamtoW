@@ -15,6 +15,7 @@ from torch.nn.modules.loss import _WeightedLoss
 from torch.utils.data.sampler import SubsetRandomSampler
 
 import helper as h
+from src.pytorchtools import EarlyStopping
 
 
 class Tester:
@@ -48,6 +49,7 @@ class Tester:
         self.scoring_func = scoring_func
         self.device = h.get_device()
 
+        self.patience = 10
         self.batch_size = 64  # TODO: What do we want to do with it?
 
     def train(self):
@@ -101,20 +103,21 @@ class Tester:
 
     def _run_one_epoch(
         self,
-        dataset: torch.utils.data.DataLoader,
+        dataloader: torch.utils.data.DataLoader,
         criterion: _WeightedLoss,
         optimizer: torch.optim,
     ):
         """
         Run through all batches in the input dataset, and perform forward and backward pass.
         Args:
+            dataloader: the dataloader upon which to compute one epoch
             criterion: the loss function
             optimizer: the optimizer used (Adam, SGD, AdamW)
         Returns:
             loss: but it should be nothing! TODO: fix this
         """
-
-        for x_batch, y_batch in dataset:
+        self.model.train()    # Declare we are going to train! No idea why, Pytorch stuff
+        for x_batch, y_batch in dataloader:
             x_batch, y_batch = (
                 x_batch.to(self.device),
                 y_batch.to(self.device),
@@ -124,6 +127,26 @@ class Tester:
             self.model.zero_grad()
             loss.backward()
             optimizer.step()
+
+    def compute_loss(self, model: nn.Module, test_loader: torch.utils.data.DataLoader, criterion: _WeightedLoss):
+        """
+        Compute the loss by summing the loss of all batches
+        Args:
+            model: the model used to compute the loss
+            test_loader: the testing data
+            criterion: the loss function
+        """
+        with torch.no_grad():
+            model.eval()
+            losses = []
+            for x_batch, y_batch in test_loader:
+                x_batch, y_batch = (
+                    x_batch.to(self.device),
+                    y_batch.to(self.device),
+                )
+                pred = model(x_batch)
+                losses.append(criterion(pred, y_batch))
+            return np.sum(np.array(losses))
 
     def cross_validation(self, k: int = 5, test_split: float = 0.1):
         """
@@ -168,9 +191,6 @@ class Tester:
             test_indices_cv = np.concatenate(
                 [indices[:lower_extreme], indices[higher_extreme:]]
             )
-            # else:
-            #     test_indices_cv = np.array(indices[:lower_extreme]) if \
-            #         len(indices[higher_extreme:]) == 0 else np.array(indices[higher_extreme:])
 
             train_dataset_cv = Subset(train_dataset, train_indices_cv)
             test_dataset_cv = Subset(train_dataset, test_indices_cv)
@@ -184,18 +204,23 @@ class Tester:
             # Recreate the model (otherwise it would not start training from scratch)
             self.model = self.model_constructor()
             # Send it to the correct device
-            self.model = self.model.to(device=self.device)  # Send model to device
+            self.model = self.model.to(device=self.device)  # Send model to device CUDA or CPU
             optimizer = self.optim(
                 self.model.parameters(), **h.adapt_params(self.param)
             )
+            early_stopping = EarlyStopping(patience=self.patience, verbose=True)
+            val_losses = []    # Vector for validation losses (this is useful for early stopping)
+            train_losses = []   # Vector for training losses (this is useful for plotting visualization)
+            val_accuracies = []
             for epoch in range(num_epochs):
+                # Train for one epoch, and record losses and accuracy
                 self._run_one_epoch(train_loader_cv, criterion, optimizer)
-                # Here we should log the score, loss, whatever!
-                print(
-                    "The score at epoch {} is {}".format(
-                        str(epoch + 1), self.score(self.model, test_loader_cv)
-                    )
-                )
+                train_losses.append(self.compute_loss(self.model, train_loader_cv, criterion))
+                val_losses.append(self.compute_loss(self.model, test_loader_cv, criterion))
+                val_accuracies.append(self.score(self.model, test_loader_cv))
+            print("Train losses: " + str(train_losses))
+            print("Validation losses: " + str(val_losses))
+            print("Validation accuracies: " + str(val_accuracies))
             print("\n")
 
         return

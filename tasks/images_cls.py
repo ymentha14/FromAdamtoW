@@ -87,7 +87,7 @@ def get_scoring_function():
 
     def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
         device = helper.get_device()
-        model.eval()
+        model.eval()     # Define we are going to evaluate the model! No idea why, Pytorch stuff
         model.to(device=device)
         correct = 0
         total = 0
