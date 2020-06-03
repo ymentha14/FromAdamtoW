@@ -4,24 +4,13 @@
 MAIN
 """
 
-import argparse
 import helper
-import json
-
-import itertools
-
-import logging
 from pathlib import Path
-import pickle
 
 from tasks import images_cls
 from tasks import speech_cls
 from tasks import text_cls
-from IPython.core.debugger import set_trace
-
 from tester import Tester
-
-
 
 
 def main():
@@ -43,18 +32,17 @@ def main():
     args = helper.parse_arguments()
 
     tasks_to_evaluate = []
-    
 
     if args.task_name == "images_cls" or args.task_name == "all":
-        task = ("images_cls", images_cls.get_model(), images_cls.get_data())
+        task = ("images_cls", images_cls.get_model(), images_cls.get_data(), images_cls.get_scoring_function())
         tasks_to_evaluate.append(task)
 
     if args.task_name == "speech_cls" or args.task_name == "all":
-        task = ("speech_cls", speech_cls.get_model(), speech_cls.get_data())
+        task = ("speech_cls", speech_cls.get_model(), speech_cls.get_data(), speech_cls.get_scoring_function())
         tasks_to_evaluate.append(task)
 
     if args.task_name == "text_cls" or args.task_name == "all":
-        task = ("text_cls", text_cls.get_model(), text_cls.get_data())
+        task = ("text_cls", text_cls.get_model(), text_cls.get_data(), text_cls.get_scoring_function())
         tasks_to_evaluate.append(task)
 
     if len(tasks_to_evaluate) == 0:
@@ -68,40 +56,41 @@ def main():
     results = {}
 
     if args.cross_validation:
-        # Grid Search Modef
-        if (len(args.params_file) != len(tasks_to_evaluate)):
-                raise ValueError("Number of files non coherent with number of tasks to evaluate.")
-        for param_file,(task_name, task_model, task_data) in zip(args.params_file,tasks_to_evaluate):
+        # Grid Search Mode
+        if len(args.params_file) != len(tasks_to_evaluate):
+            raise ValueError("Number of files non coherent with number of tasks to evaluate.")
+        for param_file, (task_name, task_model, task_data, scoring_func) in zip(args.params_file, tasks_to_evaluate):
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
             combinations = helper.get_params_combinations(param_file)
             # start of the grid search
             if args.verbose:
                 print("Testing {} combinations in total".format(sum([len(i) for i in combinations.values()])))
-            for optim,params in combinations.items():
+            for optim, params in combinations.items():
                 for param in params:
                     if args.verbose:
                         print(f"\nTesting {optim} with {param}")
                     # implement the tester
-                    tester = Tester(args,task_data,task_model,helper.STR2OPTIM[optim],param)
-                    # run it with the current parameters
-                    tester.run()
+                    tester = Tester(args, task_data, task_model, helper.STR2OPTIM[optim], param, scoring_func)
+                    # Run the cross validation phase
+                    tester.cross_validation()
                     # and log its result
-                    tester.log(f"./results/{args.task_name}_gridsearch.json")
+                    # tester.log(f"./results/{args.task_name}_gridsearch.json")
+
     else:
         # rerun the best parameters
-        for (task_name, task_model, task_data) in tasks_to_evaluate:
+        for (task_name, task_model, task_data, scoring_func) in tasks_to_evaluate:
             print("=" * 60 + f"\nRunning {args.num_runs} tests for task : {task_name}")
-            #TODO: deifne the optimizer here
+            # TODO: define the optimizer here
             
-            #results[task_name] = Tester(args, task_name, task_model, task_data).run()
-            if (args.optimizer == 'all'):
-                optims = list(h.STR2OPTIM.values())                    
+            # results[task_name] = Tester(args, task_name, task_model, task_data).run()
+            if args.optimizer == 'all':
+                optims = list(helper.STR2OPTIM.values())
             else:
                 # single optimizer
                 optims = [helper.STR2OPTIM[args.optimizer]]
             for optim in optims:
-                tester = Tester(args,task_data,task_model,optim,params)
+                tester = Tester(args, task_data, task_model, optim, params)
                 tester.run()
                 tester.log("./results/")
 

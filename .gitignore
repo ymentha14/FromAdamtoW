@@ -3,7 +3,13 @@ trash/
 .DS_Store
 *.pickle
 speech_clsf.ipynb
+<<<<<<< HEAD
 *.ipynb_checkpoints
 
 .data
 *.pyc
+=======
+.ipynb_checkpoints
+.idea
+__pycache__/
+>>>>>>> 91d855964359580e5aafe5b33030434b5ec325f0
