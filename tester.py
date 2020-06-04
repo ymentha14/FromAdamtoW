@@ -106,17 +106,18 @@ class Tester:
         dataloader: torch.utils.data.DataLoader,
         criterion: _WeightedLoss,
         optimizer: torch.optim,
-    ):
+    ) -> float:
         """
         Run through all batches in the input dataset, and perform forward and backward pass.
         Args:
-            dataloader: the dataloader upon which to compute one epoch
+            dataloader: the data loader upon which to compute one epoch (training data)
             criterion: the loss function
             optimizer: the optimizer used (Adam, SGD, AdamW)
         Returns:
-            loss: but it should be nothing! TODO: fix this
+            loss: float, the loss of the training dataset (averaged on the length of the dataset itself)
         """
         self.model.train()    # Declare we are going to train! No idea why, Pytorch stuff
+        total_loss = 0
         for x_batch, y_batch in dataloader:
             x_batch, y_batch = (
                 x_batch.to(self.device),
@@ -124,29 +125,34 @@ class Tester:
             )  # Send data to device as tensors
             output_batch = self.model(x_batch)
             loss = criterion(output_batch, y_batch)
+            total_loss += loss.item()       # Sum all losses
             self.model.zero_grad()
             loss.backward()
             optimizer.step()
 
-    def compute_loss(self, model: nn.Module, test_loader: torch.utils.data.DataLoader, criterion: _WeightedLoss):
+        return total_loss / len(dataloader.dataset)
+
+    def compute_loss(self, model: nn.Module, loader: torch.utils.data.DataLoader, criterion: _WeightedLoss) -> float:
         """
         Compute the loss by summing the loss of all batches
         Args:
             model: the model used to compute the loss
-            test_loader: the testing data
+            loader: the testing data
             criterion: the loss function
+        Returns:
+            loss: the average loss given by criterion(loader)/len(dataset)
         """
-        with torch.no_grad():
-            model.eval()
-            losses = []
-            for x_batch, y_batch in test_loader:
-                x_batch, y_batch = (
+        with torch.no_grad():  # Deactivate gradient recording!
+            model.eval()       # Declare we are evaluating, not training.
+            losses = 0
+            for x_batch, y_batch in loader:
+                x_batch, y_batch = (       # Send data to device
                     x_batch.to(self.device),
                     y_batch.to(self.device),
                 )
-                pred = model(x_batch)
-                losses.append(criterion(pred, y_batch))
-            return np.sum(np.array(losses))
+                pred = model(x_batch)     # Compute predictions
+                losses += criterion(pred, y_batch).item()
+            return losses / len(loader.dataset)  # Compute avg among loss and len of dataset
 
     def cross_validation_train_test_split(self, k: int, train_dataset: torch.utils.data.IterableDataset, cv: int):
         """
@@ -204,8 +210,8 @@ class Tester:
             np.array(indices[:split]),
         )
 
-        train_dataset = Subset(self.task_data.dataset, train_indices)
-        test_dataset = Subset(self.task_data.dataset, val_indices)
+        train_dataset = Subset(self.task_data.dataset, train_indices).dataset
+        test_dataset = Subset(self.task_data.dataset, val_indices).dataset
 
         print(len(train_dataset), len(test_dataset))
 
@@ -228,12 +234,10 @@ class Tester:
             val_accuracies = []
             for epoch in range(num_epochs):
                 # Train for one epoch, and record losses and accuracy
-                self._run_one_epoch(train_loader_cv, criterion, optimizer)
-                train_losses.append(self.compute_loss(self.model, train_loader_cv, criterion).item())
-                val_loss = self.compute_loss(self.model, test_loader_cv, criterion)
-                val_losses.append(val_loss.item())
+                train_losses.append(self._run_one_epoch(train_loader_cv, criterion, optimizer))
+                val_losses.append(self.compute_loss(self.model, test_loader_cv, criterion))
                 val_accuracies.append(self.score(self.model, test_loader_cv))
-                early_stopping(val_loss.item(), self.model)
+                early_stopping(val_losses[-1], self.model)     # Check early stopping, using the last validation loss
                 if early_stopping.early_stop:
                     print("Early stopping")
                     break
