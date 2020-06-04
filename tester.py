@@ -52,10 +52,19 @@ class Tester:
         self.patience = 10      # TODO: Is it OK?
         self.batch_size = 64  # TODO: What do we want to do with it?
 
-    def train(self):
+    def train(self, epochs: int = None):
         """
         Perform one training on the given inputs and return the elapsed time.
+        Args:
+            epochs: int, the number of epochs the models has to be trained for. If None, then use as parameter
+                the command line argument num_epochs, if it is specified then do otherwise.
+                (it is specified, for instance, in case we have performed cross validation and we already know
+                what is the best parameter).
+        Returns:
+            train_time: float, seconds elapsed during the training phase.
         """
+
+        epochs = epochs if epochs is not None else self.args.num_epochs
         if self.args.verbose:
             print("Start training ...")
 
@@ -67,7 +76,7 @@ class Tester:
         self.model = self.model.to(device=self.device)  # Send model to device
 
         # 3. Effectively train the model
-        self._run_all_epochs()
+        self._run_all_epochs(epochs)
 
         # 4. Store the time
         end_time = time.time()
@@ -154,7 +163,7 @@ class Tester:
                 losses += criterion(pred, y_batch).item()
             return losses / len(loader.dataset)  # Compute avg among loss and len of dataset
 
-    def cross_validation_train_test_split(self, k: int, train_dataset: torch.utils.data.IterableDataset, cv: int):
+    def cross_validation_train_test_split(self, k: int, train_dataset: torch.utils.data.Dataset, cv: int):
         """
         Splits the dataset into 2 partitions:
         one goes from len(train_dataset) * (split * cv) to len(train_dataset) * (split * (cv+1)) (the validation one)
@@ -186,7 +195,7 @@ class Tester:
         )
         return train_loader_cv, test_loader_cv
 
-    def cross_validation(self, k: int = 5, test_split: float = 0.1):
+    def cross_validation(self, k: int = 5):
         """
         Performs k-fold cross validation on the data provided, with the model and optimizer specified.
         First it splits the dataset into test and training according to the split fraction.
@@ -196,7 +205,6 @@ class Tester:
 
         Args:
             k: int, the argument for k-cross validation.
-            test_split: float, the fraction of data kept as test.
         Returns:
             val_losses: 2-dimensional array (k x num_epochs, second dimension may vary due to early stopping),
                 with validation losses obtained in every k-th-attempt,  in every epoch
@@ -207,22 +215,6 @@ class Tester:
             train_accuracies: 2-dimensional array (k x num_epochs, second dimension may vary due to early stopping),
                 with training accuracies obtained in every k-th-attempt,  in every epoch
         """
-        split = math.floor(len(self.task_data.dataset) * test_split)
-
-        # Create a range with numbers from 0 to the len of the dataset-1
-        indices = np.random.permutation(len(self.task_data.dataset))
-        # The first indices are kept as validation, the last as training
-        train_indices, val_indices = (
-            np.array(indices[split:]),
-            np.array(indices[:split]),
-        )
-
-        train_dataset = Subset(self.task_data.dataset, train_indices)
-        test_dataset = Subset(self.task_data.dataset, val_indices)
-
-        print("Len of training dataset: {}\nLen of validation dataset: {}".format(
-            len(train_dataset), len(test_dataset))
-        )
 
         num_epochs = self.args.num_epochs
         criterion = nn.CrossEntropyLoss()
@@ -233,7 +225,7 @@ class Tester:
         train_accuracies = []
         for cv in range(k):
             # Perform another test-train split on the train_dataset
-            train_loader_cv, test_loader_cv = self.cross_validation_train_test_split(k, train_dataset, cv)
+            train_loader_cv, test_loader_cv = self.cross_validation_train_test_split(k, self.task_data.dataset, cv)
 
             # Recreate the model (otherwise it would not start training from scratch)
             self.model = self.model_constructor()
@@ -259,10 +251,10 @@ class Tester:
                     print("Early stopping")
                     break
 
-            print("Training losses: " + str(train_losses_cv))
-            print("Validation losses: " + str(val_losses_cv))
-            print("Validation accuracies: " + str(val_accuracies_cv))
-            print("Training accuracies: " + str(train_accuracies_cv))
+            # print("Training losses: " + str(train_losses_cv))
+            # print("Validation losses: " + str(val_losses_cv))
+            # print("Validation accuracies: " + str(val_accuracies_cv))
+            # print("Training accuracies: " + str(train_accuracies_cv))
             val_losses.append(np.array(val_losses_cv))
             val_accuracies.append(np.array(val_accuracies_cv))
             train_accuracies.append(np.array(train_accuracies_cv))
@@ -272,12 +264,10 @@ class Tester:
 
         return np.array(val_losses), val_accuracies, np.array(train_losses), np.array(train_accuracies)
 
-    def _run_all_epochs(self):
+    def _run_all_epochs(self, num_epochs: int):
         """
-        run the current model over the number of epochs specified in the args.
+        run the current model over the number of epochs specified as parameter.
         """
-        # 100 by default
-        num_epochs = self.args.num_epochs
         # hard-coded criterion since we only use cross-entropy loss
         criterion = nn.CrossEntropyLoss()
 

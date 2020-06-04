@@ -153,8 +153,10 @@ def get_device():
 
 
 def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_accuracy: float,
-                       best_cv_epoch: int, param: object, verbose: bool = False):
+                       best_cv_epoch: int, param: object, optimizer: str, verbose: bool = False):
+    """
 
+    """
     # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
     df = pd.DataFrame(val_accuracies).melt(var_name='Epochs', value_name='Accuracy')
     accuracy_df = df.groupby('Epochs').agg({"Accuracy": ["count", "mean"]})
@@ -174,7 +176,7 @@ def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_acc
         best_cv_accuracy = best_accuracy_mean
         if verbose:
             print("update best param for {}:\nepochs = {}\naccuracy = {}\n params = {}".format(
-                optim,
+                optimizer,
                 best_cv_epoch,
                 best_cv_accuracy,
                 best_param

@@ -3,12 +3,14 @@
 """
 MAIN
 """
+import math
+
+from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.dataset import Subset
 
 import helper
 from pathlib import Path
-import pandas as pd
-import seaborn as sns
-import matplotlib.pyplot as plt
+import numpy as np
 
 from tasks import images_cls
 from tasks import speech_cls
@@ -74,11 +76,25 @@ def main():
     # assert((args.optimizer is None) != (args.param_file is None))
 
     if args.cross_validation:
-        # Grid Search Mode
         for param_file, (task_name, task_model, task_data, scoring_func) in zip(
             # Get the correct param file for every task
             [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate], tasks_to_evaluate
         ):
+            test_split = 0.1      # TODO: put it among the command line arguments
+            # Split test and train data
+            split = math.floor(len(task_data.dataset) * test_split)
+
+            # Create a range with numbers from 0 to the len of the dataset-1
+            indices = np.random.permutation(len(task_data.dataset))
+            # The first indices are kept as validation, the last as training
+            train_indices, val_indices = (
+                np.array(indices[split:]),
+                np.array(indices[:split]),
+            )
+
+            train_dataloader = DataLoader(Subset(task_data.dataset, train_indices), batch_size=64)   # TODO: fix batch size
+            test_dataloader = DataLoader(Subset(task_data.dataset, val_indices), batch_size=64)
+
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
             combinations = helper.get_params_combinations(param_file)
@@ -88,6 +104,9 @@ def main():
                     "Testing {} combinations in total".format(
                         sum([len(i) for i in combinations.values()])
                     )
+                )
+                print("Len of training dataset: {}\nLen of validation dataset: {}".format(
+                    len(test_dataloader.dataset), len(train_dataloader.dataset))
                 )
             for optim, params in combinations.items():
                 best_param = None
@@ -99,18 +118,18 @@ def main():
                     # implement the tester
                     tester = Tester(
                         args,
-                        task_data,
+                        train_dataloader,
                         task_model,
                         helper.STR2OPTIM[optim],
                         param,
-                        scoring_func,
+                        scoring_func
                     )
                     # Run the cross validation phase
                     val_losses, val_accuracies, train_losses, train_accuracies = tester.cross_validation()
 
                     # Update the best parameter combination, if the accuracy for this cross validation phase is higher
                     best_param, best_cv_epoch, best_cv_accuracy = helper.get_best_parameter(
-                        val_accuracies, best_param, best_cv_accuracy, best_cv_epoch, param, True)
+                        val_accuracies, best_param, best_cv_accuracy, best_cv_epoch, param, optim, True)
 
                     # Do some visualization stuff here!
                     # sns.pointplot(x="Epochs", y="Accuracy",  kind='box', data=df)\
@@ -120,6 +139,16 @@ def main():
                     # tester.log(f"./results/{args.task_name}_gridsearch.json")
                 print("Now we train the final model for {} using\nparams: {}\nepochs: {}"
                       .format(optim, best_param, best_cv_epoch))
+                tester = Tester(args,
+                                train_dataloader,
+                                task_model,
+                                helper.STR2OPTIM[optim],
+                                best_param,
+                                scoring_func)
+                tester.train(best_cv_epoch)
+                print("The score on the validation data for the best model found is: {}".format(
+                    scoring_func(tester.model, test_dataloader)
+                ))
 
     else:
         # rerun the best parameters
