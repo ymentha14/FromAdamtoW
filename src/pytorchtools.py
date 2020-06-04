@@ -24,9 +24,9 @@ class EarlyStopping:
         self.delta = delta
         self.path_model_checkpoint = path_model_checkpoint
 
-    def __call__(self, val_loss, model):
+    def __call__(self, val_acc, model):
 
-        score = -val_loss
+        score = val_acc
         
         if self.best_score is None:
             if self.verbose:
@@ -47,11 +47,11 @@ class EarlyStopping:
             # self.save_checkpoint(val_loss, model)
             self.counter = 0
 
-    def save_checkpoint(self, val_loss, model):
+    def save_checkpoint(self, val_acc, model):
         """"
         Saves model when validation loss decrease.
         """
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_loss:.6f}).  Saving model ...')
+            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_acc:.6f}).  Saving model ...')
         torch.save(model.state_dict(), self.path_model_checkpoint)
-        self.val_loss_min = val_loss
+        self.val_loss_min = val_acc
