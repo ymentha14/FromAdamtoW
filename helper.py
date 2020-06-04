@@ -7,6 +7,11 @@ import torch
 import torch.optim as optim
 
 STR2OPTIM = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD}
+TASK2PARAM = {              # Map from task name to param file.
+    "text_cls": "params/params_text.json",
+    "speech_cls": "params/params_speech.json",
+    "images_cls": "params/params_images.json"
+}
 
 
 def parse_arguments():
@@ -18,17 +23,7 @@ def parse_arguments():
         "--task_name",
         default="all",
         help="By default execute all tasks. When specified, execute a specific task. "
-        "Valid values: text_cls, speech_cls, imgages_cls.",
-    )
-
-    # (1): First phase, parameter optimization for each of the 3 datasets by a grid search approach.
-    parser.add_argument(
-        "--params_file",
-        nargs="+",
-        type=str,
-        default="./params/params.json",
-        help="Parameter file containing all different settings to conduct a GridSearch for the tasks. "
-        "Provide 3 of them if you run all for the grid search, 1 otherwise.",
+        "Valid values: text_cls, speech_cls, images_cls.",
     )
 
     parser.add_argument(

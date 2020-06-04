@@ -74,12 +74,9 @@ def main():
 
     if args.cross_validation:
         # Grid Search Mode
-        if len(args.params_file) != len(tasks_to_evaluate):
-            raise ValueError(
-                "Number of files non coherent with number of tasks to evaluate."
-            )
         for param_file, (task_name, task_model, task_data, scoring_func) in zip(
-            args.params_file, tasks_to_evaluate
+            # Get the correct param file for every task
+            [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate], tasks_to_evaluate
         ):
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
