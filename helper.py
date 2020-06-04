@@ -3,6 +3,8 @@ import json
 import itertools
 from copy import copy
 
+import numpy as np
+import pandas as pd
 import torch
 import torch.optim as optim
 
@@ -148,3 +150,36 @@ def get_device():
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     return device
+
+
+def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_accuracy: float,
+                       best_cv_epoch: int, param: object, verbose: bool = False):
+
+    # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
+    df = pd.DataFrame(val_accuracies).melt(var_name='Epochs', value_name='Accuracy')
+    accuracy_df = df.groupby('Epochs').agg({"Accuracy": ["count", "mean"]})
+    # Discard epochs that have not been reached by all cross validation attempts.
+    max_epochs_df = accuracy_df[  # count__max means that all attempts have reached such epoch
+        accuracy_df[('Accuracy', 'count')] == accuracy_df[('Accuracy', 'count')].max()]
+    best_accuracy_mean = max_epochs_df[('Accuracy', 'mean')].max()  # Get the best mean accuracy
+    best_epoch = max_epochs_df[  # Get epoch which obtained a best accuracy mean
+        max_epochs_df[('Accuracy', 'mean')] == best_accuracy_mean
+        ].index.tolist()[-1]  # Select the largest epoch with best mean (there should be only one).
+    if verbose:
+        print("Best accuracy mean: {}, obtained at epoch {}".format(best_accuracy_mean, best_epoch))
+    if best_param is None or best_cv_accuracy < best_accuracy_mean:
+        # Update best parameters
+        best_param = param
+        best_cv_epoch = best_epoch
+        best_cv_accuracy = best_accuracy_mean
+        if verbose:
+            print("update best param for {}:\nepochs = {}\naccuracy = {}\n params = {}".format(
+                optim,
+                best_cv_epoch,
+                best_cv_accuracy,
+                best_param
+            ))
+    else:
+        if verbose:
+            print("No improvements, best accuracy so far is {}".format(best_cv_accuracy))
+    return best_param, best_cv_epoch, best_cv_accuracy

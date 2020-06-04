@@ -73,8 +73,6 @@ def main():
     # either the exploration phase or evaluation phase
     # assert((args.optimizer is None) != (args.param_file is None))
 
-    results = {}
-
     if args.cross_validation:
         # Grid Search Mode
         for param_file, (task_name, task_model, task_data, scoring_func) in zip(
@@ -110,29 +108,10 @@ def main():
                     # Run the cross validation phase
                     val_losses, val_accuracies, train_losses, train_accuracies = tester.cross_validation()
 
-                    # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
-                    df = pd.DataFrame(val_accuracies).melt(var_name='Epochs', value_name='Accuracy')
-                    accuracy_df = df.groupby('Epochs').agg({"Accuracy": ["count", "mean"]})
-                    # Discard epochs that have not been reached by all cross validation attempts.
-                    max_epochs_df = accuracy_df[   # count__max means that all attempts have reached such epoch
-                        accuracy_df[('Accuracy', 'count')] == accuracy_df[('Accuracy', 'count')].max()]
-                    best_accuracy_mean = max_epochs_df[('Accuracy', 'mean')].max()  # Get the best mean accuracy
-                    best_epoch = max_epochs_df[     # Get epoch which obtained a best accuracy mean
-                        max_epochs_df[('Accuracy', 'mean')] == best_accuracy_mean
-                        ].index.tolist()[-1]  # Select the largest epoch with best mean (there should be only one).
-                    print("Best accuracy mean: {}, obtained at epoch {}".format(best_accuracy_mean, best_epoch))
-                    if best_param is None or best_cv_accuracy < best_accuracy_mean:
-                        best_param = param
-                        best_cv_epoch = best_epoch
-                        best_cv_accuracy = best_accuracy_mean
-                        print("update best param for {}:\nepochs = {}\naccuracy = {}\n params = {}".format(
-                            optim,
-                            best_cv_epoch,
-                            best_cv_accuracy,
-                            best_param
-                        ))
-                    else:
-                        print("No improvements, best accuracy so far is {}".format(best_cv_accuracy))
+                    # Update the best parameter combination, if the accuracy for this cross validation phase is higher
+                    best_param, best_cv_epoch, best_cv_accuracy = helper.get_best_parameter(
+                        val_accuracies, best_param, best_cv_accuracy, best_cv_epoch, param, True)
+
                     # Do some visualization stuff here!
                     # sns.pointplot(x="Epochs", y="Accuracy",  kind='box', data=df)\
                     #     .set_title("Validation accuracy during cross validation")
