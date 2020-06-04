@@ -4,8 +4,10 @@ Text classification
 
 import torch
 import torch.nn as nn
+import numpy as np
 
 import torchtext
+from torch.utils.data.dataset import Subset
 from torchtext.datasets import text_classification
 from torch.utils.data import DataLoader
 
@@ -152,7 +154,14 @@ def generate_batch(batch):
     return x, labels
 
 
-def get_data():
+def get_data(sample_size: int = None):
+    """
+    return the DataLoader necessary for EmoDB
+    Args:
+        sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
+    Returns:
+        dataset: of type DataLoader
+    """
 
     #
     NGRAMS = 1
@@ -168,6 +177,11 @@ def get_data():
     )
 
     # single_dataset = tud.ConcatDataset([train_dataset, test_dataset])
+
+    if sample_size is not None:
+        # If we want a smaller subset, we just sample a subset of the given size.
+        indices = np.random.permutation(len(train_dataset))[:sample_size]
+        train_dataset = Subset(train_dataset, indices)
 
     dataloader = DataLoader(
         train_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=generate_batch

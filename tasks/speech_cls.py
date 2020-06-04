@@ -8,6 +8,8 @@ from torch.utils.data import Dataset
 from speechpy.feature import mfcc
 
 # useful dics to convert labels from german to english
+from torch.utils.data.dataset import Subset
+
 DE2EN = {
     "W": "A",  # Wut-Anger
     "L": "B",  # Langeweile-Bordom
@@ -173,11 +175,19 @@ def get_model():
     return SpeechModel
 
 
-def get_data():
+def get_data(sample_size: int = None):
     """
     return the DataLoader necessary for EmoDB
+    Args:
+        sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
+    Returns:
+        dataset: of type DataLoader
     """
     dataset = SpeechDataset("./data/wav/")
+    if sample_size is not None:
+        # If we want a smaller subset, we just sample a subset of the given size.
+        indices = np.random.permutation(len(dataset))[:sample_size]
+        dataset = Subset(dataset, indices)
     dataloader = DataLoader(dataset, batch_size=20, shuffle=True, num_workers=1)
     return dataloader
 

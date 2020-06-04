@@ -5,6 +5,7 @@ Images classification
 import numpy as np
 import torch
 import torch.nn as nn
+from torch.utils.data.dataset import ConcatDataset, random_split, Subset
 from torchvision import datasets, transforms
 import torch.nn.functional as F
 
@@ -47,9 +48,11 @@ def get_model():
     return Cnn
 
 
-def get_data():
+def get_data(sample_size: int = None):
     """
     Return a DataLoader for the training data.
+    Args:
+        sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
     Returns:
         dataset: of type DataLoader
     """
@@ -74,7 +77,26 @@ def get_data():
         shuffle=True,
         **kwargs
     )
-    return train_loader
+    test_loader = torch.utils.data.DataLoader(
+        datasets.MNIST(
+            "../data",
+            train=False,
+            transform=transforms.Compose(
+                [transforms.ToTensor(), transforms.Normalize((0.1307,), (0.3081,))]
+            ),
+        ),
+        batch_size=64,
+        shuffle=True,
+        **kwargs
+    )
+    total_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])
+
+    if sample_size is not None:
+        # If we want a smaller subset, we just sample a subset of the given size.
+        indices = np.random.permutation(len(total_dataset))[:sample_size]
+        total_dataset = Subset(total_dataset, indices)
+    output_loader = torch.utils.data.DataLoader(total_dataset, batch_size=64, shuffle=True, **kwargs)
+    return output_loader
 
 
 def get_scoring_function():
@@ -87,7 +109,7 @@ def get_scoring_function():
 
     def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
         device = helper.get_device()
-        model.eval()     # Define we are going to evaluate the model! No idea why, Pytorch stuff
+        model.eval()  # Define we are going to evaluate the model! No idea why, Pytorch stuff
         model.to(device=device)
         correct = 0
         total = 0

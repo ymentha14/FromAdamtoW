@@ -213,7 +213,9 @@ class Tester:
         train_dataset = Subset(self.task_data.dataset, train_indices).dataset
         test_dataset = Subset(self.task_data.dataset, val_indices).dataset
 
-        print(len(train_dataset), len(test_dataset))
+        print("Len of training dataset: {}\nLen of validation dataset: {}".format(
+            len(train_dataset), len(test_dataset))
+        )
 
         num_epochs = self.args.num_epochs
         criterion = nn.CrossEntropyLoss()
@@ -237,6 +239,7 @@ class Tester:
                 train_losses.append(self._run_one_epoch(train_loader_cv, criterion, optimizer))
                 val_losses.append(self.compute_loss(self.model, test_loader_cv, criterion))
                 val_accuracies.append(self.score(self.model, test_loader_cv))
+                # TODO: what do we want to use? Accuracy or Loss? Now it is loss, but maybe it is better accuracy
                 early_stopping(val_losses[-1], self.model)     # Check early stopping, using the last validation loss
                 if early_stopping.early_stop:
                     print("Early stopping")
