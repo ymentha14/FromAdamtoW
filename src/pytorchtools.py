@@ -29,14 +29,20 @@ class EarlyStopping:
         score = -val_loss
         
         if self.best_score is None:
+            if self.verbose:
+                print("EarlyStopping: first recorded score")
             self.best_score = score
             # self.save_checkpoint(val_loss, model)
         elif score < self.best_score + self.delta:
+            # No improvement recorded
             self.counter += 1
-            print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+            if self.verbose:
+                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
+            if self.verbose:
+                print("EarlyStopping: score improved")
             self.best_score = score
             # self.save_checkpoint(val_loss, model)
             self.counter = 0
