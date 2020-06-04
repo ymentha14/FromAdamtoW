@@ -147,6 +147,11 @@ def adapt_params(params):
 
 
 def get_device():
+    """
+    Get the device, CUDA or CPU depending on the machine availability.
+    Returns:
+        device: CUDA or CPU
+    """
     use_cuda = torch.cuda.is_available()
     device = torch.device("cuda" if use_cuda else "cpu")
     return device
@@ -155,7 +160,18 @@ def get_device():
 def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_accuracy: float,
                        best_cv_epoch: int, param: object, optimizer: str, verbose: bool = False):
     """
-
+    Given a 2-dimensional list of accuracies per epoch (first dimension: k-th attempt,
+    second dimension: epoch), return the best epoch, mean accuracy (mean computed
+    over the same epoch) and param among the current best (best_cv_accuracy, best_cv_epoch, param)
+    and the one computed over val_accuracies (which stores the validation accuracies computed in the cv attempt).
+    Args:
+         val_accuracies: 2-dimensional array, stores validation accuracies computed in the last cv attempt.
+         best_param: parameters of model which has best accuracy so far.
+         best_cv_accuracy: best accuracy of the best model so far.
+         best_cv_epoch: epoch the best model has achieved the best accuracy so far.
+         param: hyper parameters of the current model (which may become best_param)
+         optimizer: optimizer used
+         verbose: define True to print more information.
     """
     # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
     df = pd.DataFrame(val_accuracies).melt(var_name='Epochs', value_name='Accuracy')

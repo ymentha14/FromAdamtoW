@@ -76,6 +76,7 @@ def main():
     # assert((args.optimizer is None) != (args.param_file is None))
 
     if args.cross_validation:
+        # CROSS VALIDATION
         for param_file, (task_name, task_model, task_data, scoring_func) in zip(
             # Get the correct param file for every task
             [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate], tasks_to_evaluate
@@ -139,6 +140,7 @@ def main():
                     # tester.log(f"./results/{args.task_name}_gridsearch.json")
                 print("Now we train the final model for {} using\nparams: {}\nepochs: {}"
                       .format(optim, best_param, best_cv_epoch))
+                # Train the model using the best hyper parameters found so far using cross validation
                 tester = Tester(args,
                                 train_dataloader,
                                 task_model,
@@ -146,6 +148,7 @@ def main():
                                 best_param,
                                 scoring_func)
                 tester.train(best_cv_epoch)
+                # Test on the test data.
                 print("The score on the validation data for the best model found is: {}".format(
                     scoring_func(tester.model, test_dataloader)
                 ))

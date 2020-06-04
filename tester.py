@@ -267,6 +267,8 @@ class Tester:
     def _run_all_epochs(self, num_epochs: int):
         """
         run the current model over the number of epochs specified as parameter.
+        Args:
+            num_epochs: int, the number of epochs used to train the model.
         """
         # hard-coded criterion since we only use cross-entropy loss
         criterion = nn.CrossEntropyLoss()
