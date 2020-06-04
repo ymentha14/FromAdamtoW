@@ -81,7 +81,7 @@ def main():
             # Get the correct param file for every task
             [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate], tasks_to_evaluate
         ):
-            test_split = 0.1      # TODO: put it among the command line arguments
+            test_split = args.train_test_split
             # Split test and train data
             split = math.floor(len(task_data.dataset) * test_split)
 
@@ -93,8 +93,8 @@ def main():
                 np.array(indices[:split]),
             )
 
-            train_dataloader = DataLoader(Subset(task_data.dataset, train_indices), batch_size=64)   # TODO: fix batch size
-            test_dataloader = DataLoader(Subset(task_data.dataset, val_indices), batch_size=64)
+            train_dataloader = DataLoader(Subset(task_data.dataset, train_indices), batch_size=args.batch_size)   # TODO: fix batch size
+            test_dataloader = DataLoader(Subset(task_data.dataset, val_indices), batch_size=args.batch_size)
 
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
@@ -132,10 +132,6 @@ def main():
                     best_param, best_cv_epoch, best_cv_accuracy = helper.get_best_parameter(
                         val_accuracies, best_param, best_cv_accuracy, best_cv_epoch, param, optim, True)
 
-                    # Do some visualization stuff here!
-                    # sns.pointplot(x="Epochs", y="Accuracy",  kind='box', data=df)\
-                    #     .set_title("Validation accuracy during cross validation")
-                    # plt.show()
                     # and log its result
                     # tester.log(f"./results/{args.task_name}_gridsearch.json")
                 print("Now we train the final model for {} using\nparams: {}\nepochs: {}"

@@ -50,7 +50,7 @@ class Tester:
         self.device = h.get_device()
 
         self.patience = 10      # TODO: Is it OK?
-        self.batch_size = 64  # TODO: What do we want to do with it?
+        self.batch_size = self.args.batch_size  # TODO: What do we want to do with it?
 
     def train(self, epochs: int = None):
         """

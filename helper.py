@@ -85,6 +85,20 @@ def parse_arguments():
         type=int
     )
 
+    parser.add_argument(
+        "--train_test_split",
+        help="float, the percentage of data to keep as test. Default 0.1",
+        default=0.1,
+        type=float
+    )
+
+    parser.add_argument(
+        "--batch_size",
+        help="int, the batch size for the train and test data loader.",
+        default=64,
+        type=int
+    )
+
     return parser.parse_args()
 
 
@@ -200,4 +214,8 @@ def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_acc
     else:
         if verbose:
             print("No improvements, best accuracy so far is {}".format(best_cv_accuracy))
+    # Do some visualization stuff here!
+    # sns.pointplot(x="Epochs", y="Accuracy",  kind='box', data=df)\
+    #     .set_title("Validation accuracy during cross validation")
+    # plt.show()
     return best_param, best_cv_epoch, best_cv_accuracy
