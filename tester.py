@@ -52,16 +52,22 @@ class Tester:
         self.patience = 10      # TODO: Is it OK?
         self.batch_size = self.args.batch_size  # TODO: What do we want to do with it?
 
-    def train(self, epochs: int = None):
+    def train(self, test_data: torch.utils.data.DataLoader, epochs: int = None):
         """
-        Perform one training on the given inputs and return the elapsed time.
+        Perform one training on the given inputs and returns an object with the following format:
+        {
+            "train_accuracy": [0.9, ...],
+            "train_loss": [0.5,..],
+            "time_elapsed": 10.0
+        }
         Args:
+            test_data: data loader with testing data.
             epochs: int, the number of epochs the models has to be trained for. If None, then use as parameter
                 the command line argument num_epochs, if it is specified then do otherwise.
                 (it is specified, for instance, in case we have performed cross validation and we already know
                 what is the best parameter).
         Returns:
-            train_time: float, seconds elapsed during the training phase.
+            results: an object with the above format
         """
 
         epochs = epochs if epochs is not None else self.args.num_epochs
@@ -76,7 +82,7 @@ class Tester:
         self.model = self.model.to(device=self.device)  # Send model to device
 
         # 3. Effectively train the model
-        self._run_all_epochs(epochs)
+        train_losses, train_accuracies, val_losses, val_accuracies = self._run_all_epochs(epochs, test_data)
 
         # 4. Store the time
         end_time = time.time()
@@ -86,7 +92,13 @@ class Tester:
             print("Finish training... after {:.2f}s".format(train_time))
         self.train_time = train_time
 
-        return train_time
+        return {
+            "train_accuracy": train_accuracies,
+            "train_loss": train_losses,
+            "val_accuracy": val_accuracies,
+            "val_loss": val_losses,
+            "time_elapsed": train_time
+        }
 
     def log(self, log_path: str):
         """append the scores of the current run to the json in log_path"""
@@ -260,32 +272,36 @@ class Tester:
             train_accuracies.append(np.array(train_accuracies_cv))
             train_losses.append(np.array(train_losses_cv))
 
-            print("\n")
-
         return np.array(val_losses), val_accuracies, np.array(train_losses), np.array(train_accuracies)
 
-    def _run_all_epochs(self, num_epochs: int):
+    def _run_all_epochs(self, num_epochs: int, test_data: torch.utils.data.DataLoader):
         """
         run the current model over the number of epochs specified as parameter.
         Args:
             num_epochs: int, the number of epochs used to train the model.
+            test_data: the test data loader
+        Returns:
+            train_losses: a list of training loss for each epoch
+            train_accuracies: a list of accuracies for each epoch
+            val_losses: a list of validation loss for each epoch
+            val_accuracies: a list of validation accuracies for each epoch
         """
         # hard-coded criterion since we only use cross-entropy loss
         criterion = nn.CrossEntropyLoss()
 
         optimizer = self.optim(self.model.parameters(), **h.adapt_params(self.param))
-        self.losses = []
-        self.f1s = []
+        train_losses = []
+        train_accuracies = []
+        val_losses = []
+        val_accuracies = []
 
         for epoch in range(num_epochs):
-            loss = self._run_one_epoch(self.task_data, criterion, optimizer)
+            train_losses.append(self._run_one_epoch(self.task_data, criterion, optimizer))
+            train_accuracies.append(self.scoring_func(self.model, self.task_data))
+            val_losses.append(self.compute_loss(self.model, test_data, criterion))
+            val_accuracies.append(self.scoring_func(self.model, test_data))
 
-            if self.args.verbose:
-                print(
-                    "({}/{}) Training loss: {:.3f}".format(epoch + 1, num_epochs, loss),
-                    end="\r" if epoch + 1 != num_epochs else "\n",
-                )
-        print("=" * 60 + f"\nSuccess: final loss {loss}")
+        return train_losses, train_accuracies, val_losses, val_accuracies
 
     def run(self):
         return self.train()

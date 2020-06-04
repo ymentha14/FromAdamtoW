@@ -143,7 +143,8 @@ def main():
                                 helper.STR2OPTIM[optim],
                                 best_param,
                                 scoring_func)
-                tester.train(best_cv_epoch)
+                result = tester.train(test_dataloader, best_cv_epoch)
+                helper.log_results(result, best_cv_epoch, best_param, optim, helper.TASK2LOGFILE[task_name])
                 # Test on the test data.
                 print("The score on the validation data for the best model found is: {}".format(
                     scoring_func(tester.model, test_dataloader)

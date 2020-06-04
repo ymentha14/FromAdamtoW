@@ -15,6 +15,12 @@ TASK2PARAM = {              # Map from task name to param file.
     "images_cls": "params/params_images.json"
 }
 
+TASK2LOGFILE = {              # Map from task name to param file.
+    "text_cls": "log/log_text_results.json",
+    "speech_cls": "log/log_speech_results.json",
+    "images_cls": "log/log_images_results.json"
+}
+
 
 def parse_arguments():
     """Parses the global parameters from the command line arguments."""
@@ -219,3 +225,31 @@ def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_acc
     #     .set_title("Validation accuracy during cross validation")
     # plt.show()
     return best_param, best_cv_epoch, best_cv_accuracy
+
+
+def log_results(results: object, best_cv_epoch: int, best_param: object, optim: str, log_file: str):
+    """
+    Log the results to the specified file.
+    Object is a Python object, so it can be saved directly as a json.
+    log are going to be appended at the end of the log file, in order to avoid losing data.
+    Args:
+        results: json with results (accuracy and loss per each parameter)
+        best_cv_epoch: int, the best epoch to train the model-optimizer combination
+        best_param: the best parameter found for the optimizer
+        optim: the optimizer used
+        log_file: path to the log file
+    """
+
+    with open(log_file, 'r') as json_file:
+        data = json.loads(json_file.read())
+    print(data)
+    if not data:
+        data = []
+    data.append({
+        "results": results,
+        "best_cv_epoch": best_cv_epoch,
+        "best_param": best_param,
+        "optim": optim
+    })
+    with open(log_file, 'w') as json_file:
+        json.dump(data, json_file)
