@@ -6,6 +6,9 @@ MAIN
 
 import helper
 from pathlib import Path
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
 from tasks import images_cls
 from tasks import speech_cls
@@ -89,6 +92,9 @@ def main():
                     )
                 )
             for optim, params in combinations.items():
+                best_param = None
+                best_cv_accuracy = None
+                best_cv_epoch = None
                 for param in params:
                     if args.verbose:
                         print(f"\nTesting {optim} with {param}")
@@ -102,9 +108,39 @@ def main():
                         scoring_func,
                     )
                     # Run the cross validation phase
-                    tester.cross_validation()
+                    val_losses, val_accuracies, train_losses, train_accuracies = tester.cross_validation()
+
+                    # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
+                    df = pd.DataFrame(val_accuracies).melt(var_name='Epochs', value_name='Accuracy')
+                    accuracy_df = df.groupby('Epochs').agg({"Accuracy": ["count", "mean"]})
+                    # Discard epochs that have not been reached by all cross validation attempts.
+                    max_epochs_df = accuracy_df[   # count__max means that all attempts have reached such epoch
+                        accuracy_df[('Accuracy', 'count')] == accuracy_df[('Accuracy', 'count')].max()]
+                    best_accuracy_mean = max_epochs_df[('Accuracy', 'mean')].max()  # Get the best mean accuracy
+                    best_epoch = max_epochs_df[     # Get epoch which obtained a best accuracy mean
+                        max_epochs_df[('Accuracy', 'mean')] == best_accuracy_mean
+                        ].index.tolist()[-1]  # Select the largest epoch with best mean (there should be only one).
+                    print("Best accuracy mean: {}, obtained at epoch {}".format(best_accuracy_mean, best_epoch))
+                    if best_param is None or best_cv_accuracy < best_accuracy_mean:
+                        best_param = param
+                        best_cv_epoch = best_epoch
+                        best_cv_accuracy = best_accuracy_mean
+                        print("update best param for {}:\nepochs = {}\naccuracy = {}\n params = {}".format(
+                            optim,
+                            best_cv_epoch,
+                            best_cv_accuracy,
+                            best_param
+                        ))
+                    else:
+                        print("No improvements, best accuracy so far is {}".format(best_cv_accuracy))
+                    # Do some visualization stuff here!
+                    # sns.pointplot(x="Epochs", y="Accuracy",  kind='box', data=df)\
+                    #     .set_title("Validation accuracy during cross validation")
+                    # plt.show()
                     # and log its result
                     # tester.log(f"./results/{args.task_name}_gridsearch.json")
+                print("Now we train the final model for {} using\nparams: {}\nepochs: {}"
+                      .format(optim, best_param, best_cv_epoch))
 
     else:
         # rerun the best parameters

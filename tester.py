@@ -198,7 +198,14 @@ class Tester:
             k: int, the argument for k-cross validation.
             test_split: float, the fraction of data kept as test.
         Returns:
-            Nothing
+            val_losses: 2-dimensional array (k x num_epochs, second dimension may vary due to early stopping),
+                with validation losses obtained in every k-th-attempt,  in every epoch
+            val_accuracies: 2-dimensional array (k x num_epochs, second dimension may vary due to early stopping),
+                with validation accuracies obtained in every k-th-attempt,  in every epoch
+            train_losses: 2-dimensional array (k x num_epochs, second dimension may vary due to early stopping),
+                with training losses obtained in every k-th-attempt,  in every epoch
+            train_accuracies: 2-dimensional array (k x num_epochs, second dimension may vary due to early stopping),
+                with training accuracies obtained in every k-th-attempt,  in every epoch
         """
         split = math.floor(len(self.task_data.dataset) * test_split)
 
@@ -219,6 +226,11 @@ class Tester:
 
         num_epochs = self.args.num_epochs
         criterion = nn.CrossEntropyLoss()
+
+        val_losses = []
+        val_accuracies = []
+        train_losses = []
+        train_accuracies = []
         for cv in range(k):
             # Perform another test-train split on the train_dataset
             train_loader_cv, test_loader_cv = self.cross_validation_train_test_split(k, train_dataset, cv)
@@ -230,27 +242,35 @@ class Tester:
             optimizer = self.optim(
                 self.model.parameters(), **h.adapt_params(self.param)
             )
-            early_stopping = EarlyStopping(patience=self.patience, verbose=True)
-            val_losses = []    # Vector for validation losses (this is useful for early stopping)
-            train_losses = []   # Vector for training losses (this is useful for plotting visualization)
-            val_accuracies = []
+            early_stopping = EarlyStopping(patience=self.patience, verbose=False)
+            val_losses_cv = []    # Vector for validation losses (this is useful for early stopping)
+            train_losses_cv = []   # Vector for training losses (this is useful for plotting visualization)
+            val_accuracies_cv = []
+            train_accuracies_cv = []
             for epoch in range(num_epochs):
                 # Train for one epoch, and record losses and accuracy
-                train_losses.append(self._run_one_epoch(train_loader_cv, criterion, optimizer))
-                val_losses.append(self.compute_loss(self.model, test_loader_cv, criterion))
-                val_accuracies.append(self.score(self.model, test_loader_cv))
-                # TODO: what do we want to use? Accuracy or Loss? Now it is loss, but maybe it is better accuracy
-                early_stopping(val_losses[-1], self.model)     # Check early stopping, using the last validation loss
+                train_losses_cv.append(self._run_one_epoch(train_loader_cv, criterion, optimizer))
+                val_losses_cv.append(self.compute_loss(self.model, test_loader_cv, criterion))
+                val_accuracies_cv.append(self.score(self.model, test_loader_cv))
+                train_accuracies_cv.append(self.score(self.model, train_loader_cv))
+                # TODO: what do we want to use? Accuracy or Loss? Now it is accuracy, but maybe it is better loss
+                early_stopping(val_accuracies_cv[-1], self.model)     # Check early stopping, using last val accuracy
                 if early_stopping.early_stop:
                     print("Early stopping")
                     break
 
-            print("Train losses: " + str(train_losses))
-            print("Validation losses: " + str(val_losses))
-            print("Validation accuracies: " + str(val_accuracies))
+            print("Training losses: " + str(train_losses_cv))
+            print("Validation losses: " + str(val_losses_cv))
+            print("Validation accuracies: " + str(val_accuracies_cv))
+            print("Training accuracies: " + str(train_accuracies_cv))
+            val_losses.append(np.array(val_losses_cv))
+            val_accuracies.append(np.array(val_accuracies_cv))
+            train_accuracies.append(np.array(train_accuracies_cv))
+            train_losses.append(np.array(train_losses_cv))
+
             print("\n")
 
-        return
+        return np.array(val_losses), val_accuracies, np.array(train_losses), np.array(train_accuracies)
 
     def _run_all_epochs(self):
         """
