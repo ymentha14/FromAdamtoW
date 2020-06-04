@@ -80,6 +80,14 @@ def parse_arguments():
         action="store_true",
     )
 
+    parser.add_argument(
+        "--size_dataset_sample",
+        help="If specified with an integer value, we can limit the size of the dataset in order to perform "
+             "training faster.",
+        default=None,
+        type=int
+    )
+
     return parser.parse_args()
 
 

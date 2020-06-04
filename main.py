@@ -33,11 +33,13 @@ def main():
 
     tasks_to_evaluate = []
 
+    size_of_dataset = args.size_dataset_sample
+
     if args.task_name == "images_cls" or args.task_name == "all":
         task = (
             "images_cls",
             images_cls.get_model(),
-            images_cls.get_data(),
+            images_cls.get_data(size_of_dataset),
             images_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)
@@ -46,7 +48,7 @@ def main():
         task = (
             "speech_cls",
             speech_cls.get_model(),
-            speech_cls.get_data(),
+            speech_cls.get_data(size_of_dataset),
             speech_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)
@@ -55,7 +57,7 @@ def main():
         task = (
             "text_cls",
             text_cls.get_model(),
-            text_cls.get_data(),
+            text_cls.get_data(size_of_dataset),
             text_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)
