@@ -210,8 +210,8 @@ class Tester:
             np.array(indices[:split]),
         )
 
-        train_dataset = Subset(self.task_data.dataset, train_indices).dataset
-        test_dataset = Subset(self.task_data.dataset, val_indices).dataset
+        train_dataset = Subset(self.task_data.dataset, train_indices)
+        test_dataset = Subset(self.task_data.dataset, val_indices)
 
         print("Len of training dataset: {}\nLen of validation dataset: {}".format(
             len(train_dataset), len(test_dataset))
