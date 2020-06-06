@@ -8,18 +8,30 @@ import pandas as pd
 import torch
 import torch.optim as optim
 
+from sklearn.model_selection import KFold
+
 STR2OPTIM = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD}
-TASK2PARAM = {  # Map from task name to param file.
-    "text_cls": "params/params_text.json",
-    "speech_cls": "params/params_speech.json",
-    "images_cls": "params/params_images.json",
-}
+
 
 TASK2LOGFILE = {  # Map from task name to param file.
     "text_cls": "log/log_text_results.json",
     "speech_cls": "log/log_speech_results.json",
     "images_cls": "log/log_images_results.json",
 }
+
+
+def get_param_filename(task_name):
+    """
+    Given a task_name, return it's params filename
+    """
+
+    TASK2PARAM = {  # Map from task name to param file.
+        "text_cls": "params/params_text.json",
+        "speech_cls": "params/params_speech.json",
+        "images_cls": "params/params_images.json",
+    }
+
+    return TASK2PARAM[task_name]
 
 
 def parse_arguments():
@@ -72,8 +84,8 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--cross_validation",
-        help="For each model, find and display the best learning rate and optimal epoch using cross-validation.",
+        "--grid_search",
+        help="For each task, find the best parameters for each optimizer.",
         action="store_true",
     )
 
@@ -84,25 +96,35 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--size_dataset_sample",
-        help="If specified with an integer value, we can limit the size of the dataset in order to perform "
-        "training faster.",
+        "--sample_size",
+        help="Limit the number of examples during training.",
         default=None,
         type=int,
     )
 
     parser.add_argument(
-        "--train_test_split",
-        help="float, the percentage of data to keep as test. Default 0.1",
-        default=0.1,
+        "--train_size_ratio",
+        help="Percentage of total data to use for training. Default is 0.8",
+        default=0.8,
         type=float,
     )
 
     parser.add_argument(
         "--batch_size",
-        help="int, the batch size for the train and test data loader.",
-        default=64,
+        help="int, the batch size for the train and test data loader. Default is 32.",
+        default=32,
         type=int,
+    )
+
+    parser.add_argument(
+        "--seed",
+        help="Random seed used to reproduce the same exact results.",
+        default=42,
+        type=int,
+    )
+
+    parser.add_argument(
+        "--patience", help="Patience to use for early stopping", default=7, type=int,
     )
 
     return parser.parse_args()
@@ -322,3 +344,65 @@ def log_results_cross_validation(
     )
     with open(log_file, "w") as json_file:
         json.dump(data, json_file)
+
+
+def split_train_test(dataset, train_ratio):
+    """
+    Split dataset into two parts
+    """
+
+    full_dataset = _get_full_dataset()
+
+    train_size = int(train_ratio * len(dataset))
+    test_size = len(dataset) - train_size
+
+    train_dataset, test_dataset = torch.utils.data.random_split(
+        dataset, [train_size, test_size]
+    )
+    return train_dataset, test_dataset
+
+
+def split_kfold(dataset, k, batch_size):
+    """
+    Split the dataset with k-fold
+
+    Return an iterable (generator) where each element is a tuple (train_dataloader, val_dataloader) with batch_size batch_size
+    """
+
+    kfold = KFold(n_splits=k)
+
+    for train_index, val_index in kfold.split(dataset):
+
+        train_dataset = Subset(dataset, train_index)
+        val_dataset = Subset(dataset, val_index)
+
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True
+        )
+
+        val_dataloader = torch.utils.data.DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=True
+        )
+
+        yield (train_dataloader, val_dataloader)
+
+
+def split_k_times(dataset, k, train_ratio, batch_size):
+    """
+    Split the dataset k-times with a given train ratio
+
+    Return an iterable (generator)
+    """
+
+    for _ in range(k):
+        train_dataset, val_dataset = split_train_test(dataset, train_ratio)
+
+        train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, batch_size=batch_size, shuffle=True
+        )
+
+        val_dataloader = torch.utils.data.DataLoader(
+            val_dataset, batch_size=batch_size, shuffle=True
+        )
+
+        yield (train_dataloader, val_dataloader)

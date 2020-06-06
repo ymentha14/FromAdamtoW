@@ -48,7 +48,7 @@ def get_model():
     return Cnn
 
 
-def get_data(sample_size: int = None):
+def _get_full_dataset(sample_size: int = None):
     """
     Return a DataLoader for the training data.
     Args:
@@ -61,7 +61,7 @@ def get_data(sample_size: int = None):
     kwargs = {"num_workers": 1, "pin_memory": True} if use_cuda else {}
     train_loader = torch.utils.data.DataLoader(
         datasets.MNIST(
-            "data",
+            "../data",
             train=True,
             download=True,
             transform=transforms.Compose(
@@ -75,7 +75,7 @@ def get_data(sample_size: int = None):
         ),
         batch_size=64,
         shuffle=True,
-        **kwargs
+        **kwargs  # TODO, necessary ?
     )
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST(
@@ -87,18 +87,28 @@ def get_data(sample_size: int = None):
         ),
         batch_size=64,
         shuffle=True,
-        **kwargs
+        **kwargs  # TODO, necessary ?
     )
+    # TODO. Maybe we can directly return Dataset instead of DataLoader and then compute back ?
     total_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
+        # TODO. Define it in a function.
         indices = np.random.permutation(len(total_dataset))[:sample_size]
         total_dataset = Subset(total_dataset, indices)
-    output_loader = torch.utils.data.DataLoader(
-        total_dataset, batch_size=64, shuffle=True, **kwargs
-    )
+
     return output_loader
+
+
+def get_train_dataset():
+    torch.manual_seed(args.seed)
+    return helper.split_train_test(_get_full_dataset(), args.train_size_ratio)[0]
+
+
+def get_test_dataset():
+    torch.manual_seed(args.seed)
+    return helper.split_train_test(_get_full_dataset(), args.train_size_ratio)[1]
 
 
 def get_scoring_function():
