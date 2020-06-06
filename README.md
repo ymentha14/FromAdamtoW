@@ -22,7 +22,8 @@ Python version required >= 3.6
 
 - Early stopping ?
 - Scheduler ? https://pytorch.org/docs/master/_modules/torch/optim/lr_scheduler.html#StepLR
-
+- Automatically download wav files.
+- 'best_X' could be created automatically
 
 **Text classification**
 
@@ -33,4 +34,7 @@ Dataset:
 **IDEA**
 
 - Study the relation with EarlyStopping ?
-command used : python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
+command used : 
+
+
+python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
