@@ -119,9 +119,10 @@ def main():
                     # implement the tester
                     tester = Tester(
                         args,
+                        task_name,
                         train_dataloader,
                         task_model,
-                        helper.STR2OPTIM[optim],
+                        optim,
                         param,
                         scoring_func
                     )
@@ -138,9 +139,10 @@ def main():
                       .format(optim, best_param, best_cv_epoch))
                 # Train the model using the best hyper parameters found so far using cross validation
                 tester = Tester(args,
+                                task_name,
                                 train_dataloader,
                                 task_model,
-                                helper.STR2OPTIM[optim],
+                                optim,
                                 best_param,
                                 scoring_func)
                 result = tester.train(test_dataloader, best_cv_epoch)
@@ -161,9 +163,9 @@ def main():
                 optims = list(helper.STR2OPTIM.values())
             else:
                 # single optimizer
-                optims = [helper.STR2OPTIM[args.optimizer]]
+                optims = [args.optimizer]
             for optim in optims:
-                tester = Tester(args, task_data, task_model, optim, params)
+                tester = Tester(args, task_name, task_data, task_model, optim, params)
                 tester.run()
                 tester.log("./results/")
 
