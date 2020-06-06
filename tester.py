@@ -54,7 +54,7 @@ class Tester:
         self.scoring_func = scoring_func
         self.device = h.get_device()
 
-        self.patience = 10      # TODO: Is it OK?
+        self.patience = 10  # TODO: Is it OK?
         self.batch_size = self.args.batch_size  # TODO: What do we want to do with it?
 
     def train(self, test_data: torch.utils.data.DataLoader, epochs: int = None):
@@ -87,7 +87,12 @@ class Tester:
         self.model = self.model.to(device=self.device)  # Send model to device
 
         # 3. Effectively train the model
-        train_losses, train_accuracies, val_losses, val_accuracies = self._run_all_epochs(epochs, test_data)
+        (
+            train_losses,
+            train_accuracies,
+            val_losses,
+            val_accuracies,
+        ) = self._run_all_epochs(epochs, test_data)
 
         # 4. Store the time
         end_time = time.time()
@@ -102,7 +107,7 @@ class Tester:
             "train_loss": train_losses,
             "val_accuracy": val_accuracies,
             "val_loss": val_losses,
-            "time_elapsed": train_time
+            "time_elapsed": train_time,
         }
 
     def log(self, log_path: str):
@@ -142,7 +147,7 @@ class Tester:
         Returns:
             loss: float, the loss of the training dataset (averaged on the length of the dataset itself)
         """
-        self.model.train()    # Declare we are going to train! No idea why, Pytorch stuff
+        self.model.train()  # Declare we are going to train! No idea why, Pytorch stuff
         total_loss = 0
         for x_batch, y_batch in dataloader:
             x_batch, y_batch = (
@@ -151,14 +156,19 @@ class Tester:
             )  # Send data to device as tensors
             output_batch = self.model(x_batch)
             loss = criterion(output_batch, y_batch)
-            total_loss += loss.item()       # Sum all losses
+            total_loss += loss.item()  # Sum all losses
             self.model.zero_grad()
             loss.backward()
             optimizer.step()
 
         return total_loss / len(dataloader.dataset)
 
-    def compute_loss(self, model: nn.Module, loader: torch.utils.data.DataLoader, criterion: _WeightedLoss) -> float:
+    def compute_loss(
+        self,
+        model: nn.Module,
+        loader: torch.utils.data.DataLoader,
+        criterion: _WeightedLoss,
+    ) -> float:
         """
         Compute the loss by summing the loss of all batches
         Args:
@@ -169,18 +179,22 @@ class Tester:
             loss: the average loss given by criterion(loader)/len(dataset)
         """
         with torch.no_grad():  # Deactivate gradient recording!
-            model.eval()       # Declare we are evaluating, not training.
+            model.eval()  # Declare we are evaluating, not training.
             losses = 0
             for x_batch, y_batch in loader:
-                x_batch, y_batch = (       # Send data to device
+                x_batch, y_batch = (  # Send data to device
                     x_batch.to(self.device),
                     y_batch.to(self.device),
                 )
-                pred = model(x_batch)     # Compute predictions
+                pred = model(x_batch)  # Compute predictions
                 losses += criterion(pred, y_batch).item()
-            return losses / len(loader.dataset)  # Compute avg among loss and len of dataset
+            return losses / len(
+                loader.dataset
+            )  # Compute avg among loss and len of dataset
 
-    def cross_validation_train_test_split(self, k: int, train_dataset: torch.utils.data.Dataset, cv: int):
+    def cross_validation_train_test_split(
+        self, k: int, train_dataset: torch.utils.data.Dataset, cv: int
+    ):
         """
         Splits the dataset into 2 partitions:
         one goes from len(train_dataset) * (split * cv) to len(train_dataset) * (split * (cv+1)) (the validation one)
@@ -242,28 +256,42 @@ class Tester:
         train_accuracies = []
         for cv in range(k):
             # Perform another test-train split on the train_dataset
-            train_loader_cv, test_loader_cv = self.cross_validation_train_test_split(k, self.task_data.dataset, cv)
+            train_loader_cv, test_loader_cv = self.cross_validation_train_test_split(
+                k, self.task_data.dataset, cv
+            )
 
             # Recreate the model (otherwise it would not start training from scratch)
             self.model = self.model_constructor()
             # Send it to the correct device
-            self.model = self.model.to(device=self.device)  # Send model to device CUDA or CPU
+            self.model = self.model.to(
+                device=self.device
+            )  # Send model to device CUDA or CPU
             optimizer = self.optim(
                 self.model.parameters(), **h.adapt_params(self.param)
             )
             early_stopping = EarlyStopping(patience=self.patience, verbose=False)
-            val_losses_cv = []    # Vector for validation losses (this is useful for early stopping)
-            train_losses_cv = []   # Vector for training losses (this is useful for plotting visualization)
+            val_losses_cv = (
+                []
+            )  # Vector for validation losses (this is useful for early stopping)
+            train_losses_cv = (
+                []
+            )  # Vector for training losses (this is useful for plotting visualization)
             val_accuracies_cv = []
             train_accuracies_cv = []
             for epoch in range(num_epochs):
                 # Train for one epoch, and record losses and accuracy
-                train_losses_cv.append(self._run_one_epoch(train_loader_cv, criterion, optimizer))
-                val_losses_cv.append(self.compute_loss(self.model, test_loader_cv, criterion))
+                train_losses_cv.append(
+                    self._run_one_epoch(train_loader_cv, criterion, optimizer)
+                )
+                val_losses_cv.append(
+                    self.compute_loss(self.model, test_loader_cv, criterion)
+                )
                 val_accuracies_cv.append(self.score(self.model, test_loader_cv))
                 train_accuracies_cv.append(self.score(self.model, train_loader_cv))
                 # TODO: what do we want to use? Accuracy or Loss? Now it is accuracy, but maybe it is better loss
-                early_stopping(val_accuracies_cv[-1], self.model)     # Check early stopping, using last val accuracy
+                early_stopping(
+                    val_accuracies_cv[-1], self.model
+                )  # Check early stopping, using last val accuracy
                 if early_stopping.early_stop:
                     print("Early stopping")
                     break
@@ -277,12 +305,20 @@ class Tester:
             train_accuracies.append(train_accuracies_cv)
             train_losses.append(train_losses_cv)
 
-        helper.log_results_cross_validation(train_losses, train_accuracies, val_losses, val_accuracies,
-                                            self.optim_name, helper.TASK2LOGFILE[self.task_name])
-        return np.array([np.array(el) for el in val_losses]), \
-               np.array([np.array(el) for el in val_accuracies]), \
-               np.array([np.array(el) for el in train_losses]), \
-               np.array([np.array(el) for el in train_accuracies])
+        helper.log_results_cross_validation(
+            train_losses,
+            train_accuracies,
+            val_losses,
+            val_accuracies,
+            self.optim_name,
+            helper.TASK2LOGFILE[self.task_name],
+        )
+        return (
+            np.array([np.array(el) for el in val_losses]),
+            np.array([np.array(el) for el in val_accuracies]),
+            np.array([np.array(el) for el in train_losses]),
+            np.array([np.array(el) for el in train_accuracies]),
+        )
 
     def _run_all_epochs(self, num_epochs: int, test_data: torch.utils.data.DataLoader):
         """
@@ -306,7 +342,9 @@ class Tester:
         val_accuracies = []
 
         for epoch in range(num_epochs):
-            train_losses.append(self._run_one_epoch(self.task_data, criterion, optimizer))
+            train_losses.append(
+                self._run_one_epoch(self.task_data, criterion, optimizer)
+            )
             train_accuracies.append(self.scoring_func(self.model, self.task_data))
             val_losses.append(self.compute_loss(self.model, test_data, criterion))
             val_accuracies.append(self.scoring_func(self.model, test_data))

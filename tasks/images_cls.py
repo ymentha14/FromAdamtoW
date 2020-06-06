@@ -95,7 +95,9 @@ def get_data(sample_size: int = None):
         # If we want a smaller subset, we just sample a subset of the given size.
         indices = np.random.permutation(len(total_dataset))[:sample_size]
         total_dataset = Subset(total_dataset, indices)
-    output_loader = torch.utils.data.DataLoader(total_dataset, batch_size=64, shuffle=True, **kwargs)
+    output_loader = torch.utils.data.DataLoader(
+        total_dataset, batch_size=64, shuffle=True, **kwargs
+    )
     return output_loader
 
 

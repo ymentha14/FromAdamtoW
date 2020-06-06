@@ -9,16 +9,16 @@ import torch
 import torch.optim as optim
 
 STR2OPTIM = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD}
-TASK2PARAM = {              # Map from task name to param file.
+TASK2PARAM = {  # Map from task name to param file.
     "text_cls": "params/params_text.json",
     "speech_cls": "params/params_speech.json",
-    "images_cls": "params/params_images.json"
+    "images_cls": "params/params_images.json",
 }
 
-TASK2LOGFILE = {              # Map from task name to param file.
+TASK2LOGFILE = {  # Map from task name to param file.
     "text_cls": "log/log_text_results.json",
     "speech_cls": "log/log_speech_results.json",
-    "images_cls": "log/log_images_results.json"
+    "images_cls": "log/log_images_results.json",
 }
 
 
@@ -86,23 +86,23 @@ def parse_arguments():
     parser.add_argument(
         "--size_dataset_sample",
         help="If specified with an integer value, we can limit the size of the dataset in order to perform "
-             "training faster.",
+        "training faster.",
         default=None,
-        type=int
+        type=int,
     )
 
     parser.add_argument(
         "--train_test_split",
         help="float, the percentage of data to keep as test. Default 0.1",
         default=0.1,
-        type=float
+        type=float,
     )
 
     parser.add_argument(
         "--batch_size",
         help="int, the batch size for the train and test data loader.",
         default=64,
-        type=int
+        type=int,
     )
 
     return parser.parse_args()
@@ -177,8 +177,15 @@ def get_device():
     return device
 
 
-def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_accuracy: float,
-                       best_cv_epoch: int, param: object, optimizer: str, verbose: bool = False):
+def get_best_parameter(
+    val_accuracies: np.array,
+    best_param: object,
+    best_cv_accuracy: float,
+    best_cv_epoch: int,
+    param: object,
+    optimizer: str,
+    verbose: bool = False,
+):
     """
     Given a 2-dimensional list of accuracies per epoch (first dimension: k-th attempt,
     second dimension: epoch), return the best epoch, mean accuracy (mean computed
@@ -194,32 +201,44 @@ def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_acc
          verbose: define True to print more information.
     """
     # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
-    df = pd.DataFrame(val_accuracies.tolist()).melt(var_name='Epochs', value_name='Accuracy')
-    accuracy_df = df.groupby('Epochs').agg({"Accuracy": ["count", "mean"]})
+    df = pd.DataFrame(val_accuracies.tolist()).melt(
+        var_name="Epochs", value_name="Accuracy"
+    )
+    accuracy_df = df.groupby("Epochs").agg({"Accuracy": ["count", "mean"]})
     # Discard epochs that have not been reached by all cross validation attempts.
     max_epochs_df = accuracy_df[  # count__max means that all attempts have reached such epoch
-        accuracy_df[('Accuracy', 'count')] == accuracy_df[('Accuracy', 'count')].max()]
-    best_accuracy_mean = max_epochs_df[('Accuracy', 'mean')].max()  # Get the best mean accuracy
+        accuracy_df[("Accuracy", "count")] == accuracy_df[("Accuracy", "count")].max()
+    ]
+    best_accuracy_mean = max_epochs_df[
+        ("Accuracy", "mean")
+    ].max()  # Get the best mean accuracy
     best_epoch = max_epochs_df[  # Get epoch which obtained a best accuracy mean
-        max_epochs_df[('Accuracy', 'mean')] == best_accuracy_mean
-        ].index.tolist()[-1]  # Select the largest epoch with best mean (there should be only one).
+        max_epochs_df[("Accuracy", "mean")] == best_accuracy_mean
+    ].index.tolist()[
+        -1
+    ]  # Select the largest epoch with best mean (there should be only one).
     if verbose:
-        print("Best accuracy mean: {}, obtained at epoch {}".format(best_accuracy_mean, best_epoch))
+        print(
+            "Best accuracy mean: {}, obtained at epoch {}".format(
+                best_accuracy_mean, best_epoch
+            )
+        )
     if best_param is None or best_cv_accuracy < best_accuracy_mean:
         # Update best parameters
         best_param = param
         best_cv_epoch = best_epoch
         best_cv_accuracy = best_accuracy_mean
         if verbose:
-            print("update best param for {}:\nepochs = {}\naccuracy = {}\n params = {}".format(
-                optimizer,
-                best_cv_epoch,
-                best_cv_accuracy,
-                best_param
-            ))
+            print(
+                "update best param for {}:\nepochs = {}\naccuracy = {}\n params = {}".format(
+                    optimizer, best_cv_epoch, best_cv_accuracy, best_param
+                )
+            )
     else:
         if verbose:
-            print("No improvements, best accuracy so far is {}".format(best_cv_accuracy))
+            print(
+                "No improvements, best accuracy so far is {}".format(best_cv_accuracy)
+            )
     # Do some visualization stuff here!
     # sns.pointplot(x="Epochs", y="Accuracy",  kind='box', data=df)\
     #     .set_title("Validation accuracy during cross validation")
@@ -227,7 +246,13 @@ def get_best_parameter(val_accuracies: np.array, best_param: object, best_cv_acc
     return best_param, best_cv_epoch, best_cv_accuracy
 
 
-def log_results(results: object, best_cv_epoch: int, best_param: object, optimizer: str, log_file: str):
+def log_results(
+    results: object,
+    best_cv_epoch: int,
+    best_param: object,
+    optimizer: str,
+    log_file: str,
+):
     """
     Log the results to the specified file.
     Object is a Python object, so it can be saved directly as a json.
@@ -241,27 +266,35 @@ def log_results(results: object, best_cv_epoch: int, best_param: object, optimiz
         log_file: path to the log file
     """
     try:
-        with open(log_file, 'r') as json_file:
+        with open(log_file, "r") as json_file:
             data = json.loads(json_file.read())
         # print(data)
         if not data:
             data = []
-    except:     # Should everything bad happen, just re-initialize it with an empty list.
+    except:  # Should everything bad happen, just re-initialize it with an empty list.
         print("Something went wrong with the log file!")
         data = []
-    data.append({
-        "results": results,
-        "best_cv_epoch": best_cv_epoch,
-        "best_param": best_param,
-        "optimizer": optimizer,
-        "cross_validation": False        # This is the best result, not one of the many cross validation attempts
-    })
-    with open(log_file, 'w') as json_file:
+    data.append(
+        {
+            "results": results,
+            "best_cv_epoch": best_cv_epoch,
+            "best_param": best_param,
+            "optimizer": optimizer,
+            "cross_validation": False,  # This is the best result, not one of the many cross validation attempts
+        }
+    )
+    with open(log_file, "w") as json_file:
         json.dump(data, json_file)
 
 
-def log_results_cross_validation(train_losses: list, train_accuracies: list, val_losses: list,
-                                 val_accuracies: list, optimizer: str, log_file: str):
+def log_results_cross_validation(
+    train_losses: list,
+    train_accuracies: list,
+    val_losses: list,
+    val_accuracies: list,
+    optimizer: str,
+    log_file: str,
+):
     """
     Log the cross validation results (train and validation accuracy and losses, as a 2-dimensional list
     divided by attempt and epoch). Set the cross_validation flag to true.
@@ -273,17 +306,19 @@ def log_results_cross_validation(train_losses: list, train_accuracies: list, val
         optimizer: name of the optimizer (Adam, AdamW, SGD).
         log_file: name of the log file
     """
-    with open(log_file, 'r') as json_file:
+    with open(log_file, "r") as json_file:
         data = json.loads(json_file.read())
     if not data:
         data = []
-    data.append({
-        "train_losses": train_losses,
-        "train_accuracies": train_accuracies,
-        "val_losses": val_losses,
-        "val_accuracies": val_accuracies,
-        "optimizer": optimizer,
-        "cross_validation": True       # This is just one of the many cross validation results.
-    })
-    with open(log_file, 'w') as json_file:
+    data.append(
+        {
+            "train_losses": train_losses,
+            "train_accuracies": train_accuracies,
+            "val_losses": val_losses,
+            "val_accuracies": val_accuracies,
+            "optimizer": optimizer,
+            "cross_validation": True,  # This is just one of the many cross validation results.
+        }
+    )
+    with open(log_file, "w") as json_file:
         json.dump(data, json_file)

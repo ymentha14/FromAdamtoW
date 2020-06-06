@@ -5,7 +5,14 @@ import torch
 # Code inspired by https://github.com/Bjarten/early-stopping-pytorch and freely re-adapted
 class EarlyStopping:
     """Early stops the training if validation loss doesn't improve after a given patience."""
-    def __init__(self, patience=7, path_model_checkpoint="models/checkpoint.pt", verbose=False, delta=0):
+
+    def __init__(
+        self,
+        patience=7,
+        path_model_checkpoint="models/checkpoint.pt",
+        verbose=False,
+        delta=0,
+    ):
         """
         Args:
             patience (int): How long to wait after last time validation loss improved.
@@ -27,7 +34,7 @@ class EarlyStopping:
     def __call__(self, val_acc, model):
 
         score = val_acc
-        
+
         if self.best_score is None:
             if self.verbose:
                 print("EarlyStopping: first recorded score")
@@ -37,7 +44,7 @@ class EarlyStopping:
             # No improvement recorded
             self.counter += 1
             if self.verbose:
-                print(f'EarlyStopping counter: {self.counter} out of {self.patience}')
+                print(f"EarlyStopping counter: {self.counter} out of {self.patience}")
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
@@ -52,6 +59,8 @@ class EarlyStopping:
         Saves model when validation loss decrease.
         """
         if self.verbose:
-            print(f'Validation loss decreased ({self.val_loss_min:.6f} --> {val_acc:.6f}).  Saving model ...')
+            print(
+                f"Validation loss decreased ({self.val_loss_min:.6f} --> {val_acc:.6f}).  Saving model ..."
+            )
         torch.save(model.state_dict(), self.path_model_checkpoint)
         self.val_loss_min = val_acc

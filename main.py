@@ -79,7 +79,8 @@ def main():
         # CROSS VALIDATION
         for param_file, (task_name, task_model, task_data, scoring_func) in zip(
             # Get the correct param file for every task
-            [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate], tasks_to_evaluate
+            [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate],
+            tasks_to_evaluate,
         ):
             test_split = args.train_test_split
             # Split test and train data
@@ -93,8 +94,12 @@ def main():
                 np.array(indices[:split]),
             )
 
-            train_dataloader = DataLoader(Subset(task_data.dataset, train_indices), batch_size=args.batch_size)   # TODO: fix batch size
-            test_dataloader = DataLoader(Subset(task_data.dataset, val_indices), batch_size=args.batch_size)
+            train_dataloader = DataLoader(
+                Subset(task_data.dataset, train_indices), batch_size=args.batch_size
+            )  # TODO: fix batch size
+            test_dataloader = DataLoader(
+                Subset(task_data.dataset, val_indices), batch_size=args.batch_size
+            )
 
             print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
             # create the combinations
@@ -106,8 +111,10 @@ def main():
                         sum([len(i) for i in combinations.values()])
                     )
                 )
-                print("Len of training dataset: {}\nLen of validation dataset: {}".format(
-                    len(test_dataloader.dataset), len(train_dataloader.dataset))
+                print(
+                    "Len of training dataset: {}\nLen of validation dataset: {}".format(
+                        len(test_dataloader.dataset), len(train_dataloader.dataset)
+                    )
                 )
             for optim, params in combinations.items():
                 best_param = None
@@ -124,33 +131,62 @@ def main():
                         task_model,
                         optim,
                         param,
-                        scoring_func
+                        scoring_func,
                     )
                     # Run the cross validation phase
-                    val_losses, val_accuracies, train_losses, train_accuracies = tester.cross_validation()
+                    (
+                        val_losses,
+                        val_accuracies,
+                        train_losses,
+                        train_accuracies,
+                    ) = tester.cross_validation()
 
                     # Update the best parameter combination, if the accuracy for this cross validation phase is higher
-                    best_param, best_cv_epoch, best_cv_accuracy = helper.get_best_parameter(
-                        val_accuracies, best_param, best_cv_accuracy, best_cv_epoch, param, optim, True)
+                    (
+                        best_param,
+                        best_cv_epoch,
+                        best_cv_accuracy,
+                    ) = helper.get_best_parameter(
+                        val_accuracies,
+                        best_param,
+                        best_cv_accuracy,
+                        best_cv_epoch,
+                        param,
+                        optim,
+                        True,
+                    )
 
                     # and log its result
                     # tester.log(f"./results/{args.task_name}_gridsearch.json")
-                print("Now we train the final model for {} using\nparams: {}\nepochs: {}"
-                      .format(optim, best_param, best_cv_epoch))
+                print(
+                    "Now we train the final model for {} using\nparams: {}\nepochs: {}".format(
+                        optim, best_param, best_cv_epoch
+                    )
+                )
                 # Train the model using the best hyper parameters found so far using cross validation
-                tester = Tester(args,
-                                task_name,
-                                train_dataloader,
-                                task_model,
-                                optim,
-                                best_param,
-                                scoring_func)
+                tester = Tester(
+                    args,
+                    task_name,
+                    train_dataloader,
+                    task_model,
+                    optim,
+                    best_param,
+                    scoring_func,
+                )
                 result = tester.train(test_dataloader, best_cv_epoch)
-                helper.log_results(result, best_cv_epoch, best_param, optim, helper.TASK2LOGFILE[task_name])
+                helper.log_results(
+                    result,
+                    best_cv_epoch,
+                    best_param,
+                    optim,
+                    helper.TASK2LOGFILE[task_name],
+                )
                 # Test on the test data.
-                print("The score on the validation data for the best model found is: {}".format(
-                    scoring_func(tester.model, test_dataloader)
-                ))
+                print(
+                    "The score on the validation data for the best model found is: {}".format(
+                        scoring_func(tester.model, test_dataloader)
+                    )
+                )
 
     else:
         # rerun the best parameters
