@@ -14,6 +14,7 @@ from torch.utils.data import Subset
 from torch.nn.modules.loss import _WeightedLoss
 from torch.utils.data.sampler import SubsetRandomSampler
 
+import helper
 import helper as h
 from src.pytorchtools import EarlyStopping
 
@@ -26,9 +27,10 @@ class Tester:
     def __init__(
         self,
         args: object,
+        task_name: str,
         task_data: torch.utils.data.DataLoader,
         task_model: nn.Module,
-        optim: torch.optim,
+        optimizer: str,
         param: object,
         scoring_func: Callable[[nn.Module, torch.utils.data.DataLoader], float],
     ):
@@ -36,15 +38,18 @@ class Tester:
         
         Args:
             args: parsed arguments
+            task_name: name of the task
             task_data: Dataloader to the dataset
             task_model: model constructor for the network that performs decently on the current dataset
             optim: torch optimizer used
             param: dict of parameters for the model/dataset/optimizer combination
         """
         self.args = args
+        self.task_name = task_name
         self.task_data = task_data
         self.model_constructor = task_model
-        self.optim = optim
+        self.optim = h.STR2OPTIM[optimizer]
+        self.optim_name = optimizer
         self.param = param
         self.scoring_func = scoring_func
         self.device = h.get_device()
@@ -267,12 +272,17 @@ class Tester:
             # print("Validation losses: " + str(val_losses_cv))
             # print("Validation accuracies: " + str(val_accuracies_cv))
             # print("Training accuracies: " + str(train_accuracies_cv))
-            val_losses.append(np.array(val_losses_cv))
-            val_accuracies.append(np.array(val_accuracies_cv))
-            train_accuracies.append(np.array(train_accuracies_cv))
-            train_losses.append(np.array(train_losses_cv))
+            val_losses.append(val_losses_cv)
+            val_accuracies.append(val_accuracies_cv)
+            train_accuracies.append(train_accuracies_cv)
+            train_losses.append(train_losses_cv)
 
-        return np.array(val_losses), val_accuracies, np.array(train_losses), np.array(train_accuracies)
+        helper.log_results_cross_validation(train_losses, train_accuracies, val_losses, val_accuracies,
+                                            self.optim_name, helper.TASK2LOGFILE[self.task_name])
+        return np.array([np.array(el) for el in val_losses]), \
+               np.array([np.array(el) for el in val_accuracies]), \
+               np.array([np.array(el) for el in train_losses]), \
+               np.array([np.array(el) for el in train_accuracies])
 
     def _run_all_epochs(self, num_epochs: int, test_data: torch.utils.data.DataLoader):
         """
