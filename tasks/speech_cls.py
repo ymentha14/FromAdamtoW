@@ -8,6 +8,16 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from speechpy.feature import mfcc
 import pytorch_helper as ph
+import wget
+import zipfile
+import os
+import shutil
+
+
+# url for the dataset
+url = 'http://emodb.bilderbar.info/download/download.zip'
+target_path = Path("./data/speech")
+data_path = target_path.joinpath("wav")
 
 
 # useful dics to convert labels from german to english
@@ -177,24 +187,6 @@ def get_model():
     # double necessary to work with the mfcc features
     return SpeechModel
 
-
-def get_data(sample_size: int = None):
-    """
-    return the DataLoader necessary for EmoDB
-    Args:
-        sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
-    Returns:
-        dataset: of type DataLoader
-    """
-    dataset = SpeechDataset("./data/wav/")
-    if sample_size is not None:
-        # If we want a smaller subset, we just sample a subset of the given size.
-        indices = np.random.permutation(len(dataset))[:sample_size]
-        dataset = Subset(dataset, indices)
-    dataloader = DataLoader(dataset, batch_size=20, shuffle=True, num_workers=1)
-    return dataloader
-
-
 def get_scoring_function():
     """
     Returns the function that computes the score, given the model and the data (as a torch DataLoader).
@@ -230,8 +222,8 @@ def get_full_dataset(sample_size):
     Returns:
         dataset: of type DataLoader
     """
-
-    full_dataset = SpeechDataset("./data/wav/")
+    download()
+    full_dataset = SpeechDataset(str(data_path))
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
@@ -240,6 +232,36 @@ def get_full_dataset(sample_size):
         full_dataset = Subset(full_dataset, indices)
 
     return full_dataset
+
+
+
+
+
+def download():
+    """
+    download the data from EMoDB website
+    """
+    target_path.mkdir(parents=True,exist_ok=True)
+    zip_path = target_path.joinpath("download.zip")
+
+    if data_path.exists():
+        return None
+
+    if (not zip_path.exists()):
+        print("No existing zip file found: start downloading")
+        wget.download(url, str(target_path))
+
+    with zipfile.ZipFile(str(zip_path), 'r') as zip_ref:
+        print("Extracting zip file..")
+        zip_ref.extractall(str(target_path))
+        
+    assert(data_path.exists())
+    shutil.rmtree(str(target_path.joinpath("lablaut")))
+    shutil.rmtree(str(target_path.joinpath("labsilb")))
+    shutil.rmtree(str(target_path.joinpath("silb")))
+    os.remove(str(target_path.joinpath("erkennung.txt")))
+    os.remove(str(target_path.joinpath("erklaerung.txt")))
+    print("Download successful.")
 
 
 if __name__ == "__main__":
