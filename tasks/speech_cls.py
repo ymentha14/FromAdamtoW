@@ -2,10 +2,13 @@ from pathlib import Path
 from scipy.io import wavfile
 import numpy as np
 import torch.nn as nn
+import torch
 import torch.optim as optim
 from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from speechpy.feature import mfcc
+import pytorch_helper as ph
+
 
 # useful dics to convert labels from german to english
 from torch.utils.data.dataset import Subset
@@ -194,11 +197,49 @@ def get_data(sample_size: int = None):
 
 def get_scoring_function():
     """
-    Returns the function that computes the score, given the model and the data.
+    Returns the function that computes the score, given the model and the data (as a torch DataLoader).
+    In case of images_cls the scoring function is the accuracy (correct / total).
     Returns:
         score_func: (model: nn.Module, data: torch.utils.data.DataLoader) -> float
     """
-    raise NotImplementedError
+
+    def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
+        device = ph.get_device()
+        model.eval()  # Define we are going to evaluate the model! No idea why, Pytorch stuff
+        model.to(device=device)
+        correct = 0
+        total = 0
+        with torch.no_grad():
+            for data, target in data:
+                data, target = data.to(device), target.to(device)
+                output = model(data)
+                pred = output.argmax(
+                    dim=1, keepdim=True
+                )  # get the index of the max log-probability
+                correct += pred.eq(target.view_as(pred)).sum().item()
+                total += len(data)
+        return 100.0 * correct / total
+
+    return accuracy
+
+def get_full_dataset(sample_size):
+    """
+    Return a DataLoader for the training data.
+    Args:
+        sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
+    Returns:
+        dataset: of type DataLoader
+    """
+
+    full_dataset = SpeechDataset("./data/wav/")
+
+    if sample_size is not None:
+        # If we want a smaller subset, we just sample a subset of the given size.
+        # TODO. Define it in a function.
+        indices = np.random.permutation(len(full_dataset))[:sample_size]
+        full_dataset = Subset(full_dataset, indices)
+
+    return full_dataset
 
 
 if __name__ == "__main__":
