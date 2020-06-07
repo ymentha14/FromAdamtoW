@@ -148,6 +148,13 @@ def parse_arguments():
         type=int,
     )
 
+    parser.add_argument(
+        "--overwrite_best_param",
+        help="If we are performing grid_search and we specify this parameter, the parameter in best_'task'.json will "
+             "be updated with the best parameters found with the current grid search.",
+        action="store_true",
+    )
+
     return parser.parse_args()
 
 
@@ -212,8 +219,8 @@ def adapt_params(params):
 def compute_best_parameter(
     val_accuracies: np.array,
     best_param: object,
-    best_cv_accuracy: float,
     best_cv_epoch: int,
+    best_cv_accuracy: float,
     param: object,
     optimizer: str,
     verbose: bool = False,
@@ -226,8 +233,8 @@ def compute_best_parameter(
     Args:
          val_accuracies: 2-dimensional array, stores validation accuracies computed in the last cv attempt.
          best_param: parameters of model which has best accuracy so far.
-         best_cv_accuracy: best accuracy of the best model so far.
          best_cv_epoch: epoch the best model has achieved the best accuracy so far.
+         best_cv_accuracy: best accuracy of the best model so far.
          param: hyper parameters of the current model (which may become best_param)
          optimizer: optimizer used
          verbose: define True to print more information.
@@ -346,3 +353,13 @@ def get_best_parameters(task_name):
     filepath = get_param_filepath(task_name, best=True)
     with open(filepath, "r") as f:
         return json.load(f)
+
+
+def override_best_parameters(task_name: str, best_param: object):
+    """
+    Override the best parameters for the task given
+    """
+
+    filepath = get_param_filepath(task_name, best=True)
+    with open(filepath, "w") as f:
+        json.dump(best_param, f, indent=4)

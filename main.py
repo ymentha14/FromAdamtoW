@@ -46,6 +46,7 @@ def grid_search(task, args):
         )
         print(f"Performing grid search on {len(train_dataset)} examples.")
 
+    best_params_per_optimizer = {}
     for optim, params in combinations.items():
 
         best_param = None
@@ -72,18 +73,22 @@ def grid_search(task, args):
                 do_cv=True
             )
 
-            # Update the best parameter combination, if the accuracy for this cross validation phase is higher
-            (best_param, best_cv_epoch, best_cv_accuracy,) = h.get_best_parameter(
-                val_accuracies,
-                best_param,
-                best_cv_accuracy,
-                best_cv_epoch,
-                param,
-                optim,
-                True,
+            # Update the best parameter combination if we specified the --overwrite_best_param argument
+            best_param, best_cv_epoch, best_cv_accuracy = h.compute_best_parameter(
+                val_accuracies=val_accuracies,
+                best_param=best_param,
+                best_cv_epoch=best_cv_epoch,
+                best_cv_accuracy=best_cv_accuracy,
+                param=param,
+                optimizer=optim,
+                verbose=True
             )
+        best_params_per_optimizer[optim] = {
+            "num_epoch": best_cv_epoch,
+            "param": best_param
+        }
+    return best_params_per_optimizer
 
-        print("TODO. We need to store the information regarding the best parameters!")
 
 
 def main():
@@ -152,6 +157,11 @@ def main():
 
         for task in tasks_to_evaluate:
             best_params = grid_search(task, args)
+            if args.overwrite_best_param:
+                if args.verbose:
+                    print("Override best parameters for task {} with {}".format(task[0], best_params))
+                # We want to overwrite the best parameters
+                h.override_best_parameters(task[0], best_params)
 
         # TODO. Do w
 
