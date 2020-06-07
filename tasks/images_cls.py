@@ -10,6 +10,7 @@ from torchvision import datasets, transforms
 import torch.nn.functional as F
 
 import helper
+import pytorch_helper as ph
 
 
 class Cnn(nn.Module):
@@ -48,7 +49,7 @@ def get_model():
     return Cnn
 
 
-def _get_full_dataset(sample_size: int = None):
+def get_full_dataset(sample_size):
     """
     Return a DataLoader for the training data.
     Args:
@@ -75,7 +76,7 @@ def _get_full_dataset(sample_size: int = None):
         ),
         batch_size=64,
         shuffle=True,
-        **kwargs  # TODO, necessary ?
+        **kwargs,  # TODO, necessary ?
     )
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST(
@@ -87,28 +88,20 @@ def _get_full_dataset(sample_size: int = None):
         ),
         batch_size=64,
         shuffle=True,
-        **kwargs  # TODO, necessary ?
+        **kwargs,  # TODO, necessary ?
     )
     # TODO. Maybe we can directly return Dataset instead of DataLoader and then compute back ?
-    total_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])
+    full_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])
+
+    print(f"sample size: {sample_size}")
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
         # TODO. Define it in a function.
-        indices = np.random.permutation(len(total_dataset))[:sample_size]
-        total_dataset = Subset(total_dataset, indices)
+        indices = np.random.permutation(len(full_dataset))[:sample_size]
+        full_dataset = Subset(full_dataset, indices)
 
-    return output_loader
-
-
-def get_train_dataset():
-    torch.manual_seed(args.seed)
-    return helper.split_train_test(_get_full_dataset(), args.train_size_ratio)[0]
-
-
-def get_test_dataset():
-    torch.manual_seed(args.seed)
-    return helper.split_train_test(_get_full_dataset(), args.train_size_ratio)[1]
+    return full_dataset
 
 
 def get_scoring_function():
@@ -120,7 +113,7 @@ def get_scoring_function():
     """
 
     def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
-        device = helper.get_device()
+        device = ph.get_device()
         model.eval()  # Define we are going to evaluate the model! No idea why, Pytorch stuff
         model.to(device=device)
         correct = 0

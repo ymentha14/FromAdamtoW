@@ -9,11 +9,11 @@ import numpy as np
 import torchtext
 from torch.utils.data.dataset import Subset
 from torchtext.datasets import text_classification
-from torch.utils.data import DataLoader
+from torch.utils.data.dataset import ConcatDataset
+
+import pytorch_helper as ph
 
 BATCH_SIZE = 16
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class TextClassifier(nn.Module):
@@ -114,7 +114,7 @@ def get_scoring_function():
     """
 
     def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
-        device = helper.get_device()
+        device = ph.get_device()
         model.eval()
         model.to(device=device)
         correct = 0
@@ -141,22 +141,10 @@ Load data
 import torch.utils.data as tud
 
 
-def generate_batch(batch):
-
-    sequences = [seq for (label, seq) in batch]
-    pad_sequences = torch.nn.utils.rnn.pad_sequence(sequences, batch_first=True)
-    seq_length = torch.tensor([len(seq) for (label, seq) in batch]).reshape(-1, 1)
-    labels = torch.tensor([label for (label, seq) in batch])
-
-    x = torch.cat([seq_length, pad_sequences], dim=1)
-
-    # return (pad_sequences, seq_length), labels
-    return x, labels
-
-
-def get_data(sample_size: int = None):
+def get_full_dataset(sample_size: int = None):
     """
-    return the DataLoader necessary for EmoDB
+    Return Dataset
+
     Args:
         sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
     Returns:
@@ -176,15 +164,19 @@ def get_data(sample_size: int = None):
         root="./.data", ngrams=NGRAMS, vocab=None
     )
 
-    # single_dataset = tud.ConcatDataset([train_dataset, test_dataset])
-
     if sample_size is not None:
-        # If we want a smaller subset, we just sample a subset of the given size.
+        # Sample a subset of the given size.
         indices = np.random.permutation(len(train_dataset))[:sample_size]
         train_dataset = Subset(train_dataset, indices)
 
-    dataloader = DataLoader(
-        train_dataset, batch_size=BATCH_SIZE, shuffle=True, collate_fn=generate_batch
-    )
+    full_dataset = ConcatDataset([train_dataset, test_dataset])
 
-    return dataloader
+    print(f"sample size: {sample_size}")
+
+    if sample_size is not None:
+        # If we want a smaller subset, we just sample a subset of the given size.
+        # TODO. Define it in a function.
+        indices = np.random.permutation(len(full_dataset))[:sample_size]
+        full_dataset = Subset(full_dataset, indices)
+
+    return full_dataset

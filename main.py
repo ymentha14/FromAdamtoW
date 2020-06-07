@@ -5,10 +5,11 @@ MAIN
 """
 import math
 
+import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 
-import helper
+
 from pathlib import Path
 import numpy as np
 
@@ -16,6 +17,73 @@ from tasks import images_cls
 from tasks import speech_cls
 from tasks import text_cls
 from tester import Tester
+
+import helper as h
+import pytorch_helper as ph
+
+
+def grid_search(task, args):
+    """
+    Compute grid search for the given task
+    """
+    (task_name, task_model, train_dataset, X, scoring_func) = task
+
+    if args.verbose:
+        print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
+
+    param_filename = h.get_param_filepath(task_name, best=False)
+
+    print(param_filename)
+
+    combinations = h.get_params_combinations(param_filename)
+
+    # start of the grid search
+    if args.verbose:
+        print(
+            "Testing {} combinations in total".format(
+                sum([len(i) for i in combinations.values()])
+            )
+        )
+        print(f"Performing grid search on {len(train_dataset)} examples.")
+
+    for optim, params in combinations.items():
+
+        best_param = None
+        best_cv_accuracy = None
+        best_cv_epoch = None
+
+        for i, param in enumerate(params):
+            if args.verbose:
+                print(f"\n{i}. Testing {optim} with {param}")
+            tester = Tester(
+                args=args,
+                task_name=task_name,
+                train_dataset=train_dataset,
+                test_dataset=None,
+                task_model=task_model,
+                optimizer=optim,
+                param=param,
+                scoring_func=scoring_func,
+                num_epochs=h.get_default_num_epochs(task_name),
+            )
+
+            # Run the cross validation phase
+            (train_losses, train_accuracies, val_losses, val_accuracies,) = tester.run(
+                do_cv=True
+            )
+
+            # Update the best parameter combination, if the accuracy for this cross validation phase is higher
+            (best_param, best_cv_epoch, best_cv_accuracy,) = h.get_best_parameter(
+                val_accuracies,
+                best_param,
+                best_cv_accuracy,
+                best_cv_epoch,
+                param,
+                optim,
+                True,
+            )
+
+        print("TODO. We need to store the information regarding the best parameters!")
 
 
 def main():
@@ -34,17 +102,21 @@ def main():
     """
 
     # Get arguments
-    args = helper.parse_arguments()
+    args = h.parse_arguments()
+
+    # Set the torch seed
+    torch.manual_seed(args.seed)
 
     tasks_to_evaluate = []
 
-    size_of_dataset = args.size_dataset_sample
-
     if args.task_name == "images_cls" or args.task_name == "all":
+
         task = (
             "images_cls",
             images_cls.get_model(),
-            images_cls.get_data(size_of_dataset),
+            *ph.split_train_test(
+                images_cls.get_full_dataset(args.sample_size), args.train_size_ratio
+            ),
             images_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)
@@ -53,7 +125,9 @@ def main():
         task = (
             "speech_cls",
             speech_cls.get_model(),
-            speech_cls.get_data(size_of_dataset),
+            *ph.split_train_test(
+                speech_cls.get_full_dataset(args.sample_size), args.train_size_ratio
+            ),
             speech_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)
@@ -62,7 +136,9 @@ def main():
         task = (
             "text_cls",
             text_cls.get_model(),
-            text_cls.get_data(size_of_dataset),
+            *ph.split_train_test(
+                text_cls.get_full_dataset(args.sample_size), args.train_size_ratio
+            ),
             text_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)
@@ -72,138 +148,52 @@ def main():
             "task_name must be either 'images_cls', 'speech_cls', 'text_cls' or 'all'."
         )
 
-    # either the exploration phase or evaluation phase
-    # assert((args.optimizer is None) != (args.param_file is None))
+    if args.grid_search:
 
-    if args.cross_validation:
-        # CROSS VALIDATION
-        for param_file, (task_name, task_model, task_data, scoring_func) in zip(
-            # Get the correct param file for every task
-            [helper.TASK2PARAM[t[0]] for t in tasks_to_evaluate],
-            tasks_to_evaluate,
-        ):
-            test_split = args.train_test_split
-            # Split test and train data
-            split = math.floor(len(task_data.dataset) * test_split)
+        for task in tasks_to_evaluate:
+            best_params = grid_search(task, args)
 
-            # Create a range with numbers from 0 to the len of the dataset-1
-            indices = np.random.permutation(len(task_data.dataset))
-            # The first indices are kept as validation, the last as training
-            train_indices, val_indices = (
-                np.array(indices[split:]),
-                np.array(indices[:split]),
-            )
-
-            train_dataloader = DataLoader(
-                Subset(task_data.dataset, train_indices), batch_size=args.batch_size
-            )  # TODO: fix batch size
-            test_dataloader = DataLoader(
-                Subset(task_data.dataset, val_indices), batch_size=args.batch_size
-            )
-
-            print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
-            # create the combinations
-            combinations = helper.get_params_combinations(param_file)
-            # start of the grid search
-            if args.verbose:
-                print(
-                    "Testing {} combinations in total".format(
-                        sum([len(i) for i in combinations.values()])
-                    )
-                )
-                print(
-                    "Len of training dataset: {}\nLen of validation dataset: {}".format(
-                        len(test_dataloader.dataset), len(train_dataloader.dataset)
-                    )
-                )
-            for optim, params in combinations.items():
-                best_param = None
-                best_cv_accuracy = None
-                best_cv_epoch = None
-                for param in params:
-                    if args.verbose:
-                        print(f"\nTesting {optim} with {param}")
-                    # implement the tester
-                    tester = Tester(
-                        args,
-                        task_name,
-                        train_dataloader,
-                        task_model,
-                        optim,
-                        param,
-                        scoring_func,
-                    )
-                    # Run the cross validation phase
-                    (
-                        val_losses,
-                        val_accuracies,
-                        train_losses,
-                        train_accuracies,
-                    ) = tester.cross_validation()
-
-                    # Update the best parameter combination, if the accuracy for this cross validation phase is higher
-                    (
-                        best_param,
-                        best_cv_epoch,
-                        best_cv_accuracy,
-                    ) = helper.get_best_parameter(
-                        val_accuracies,
-                        best_param,
-                        best_cv_accuracy,
-                        best_cv_epoch,
-                        param,
-                        optim,
-                        True,
-                    )
-
-                    # and log its result
-                    # tester.log(f"./results/{args.task_name}_gridsearch.json")
-                print(
-                    "Now we train the final model for {} using\nparams: {}\nepochs: {}".format(
-                        optim, best_param, best_cv_epoch
-                    )
-                )
-                # Train the model using the best hyper parameters found so far using cross validation
-                tester = Tester(
-                    args,
-                    task_name,
-                    train_dataloader,
-                    task_model,
-                    optim,
-                    best_param,
-                    scoring_func,
-                )
-                result = tester.train(test_dataloader, best_cv_epoch)
-                helper.log_results(
-                    result,
-                    best_cv_epoch,
-                    best_param,
-                    optim,
-                    helper.TASK2LOGFILE[task_name],
-                )
-                # Test on the test data.
-                print(
-                    "The score on the validation data for the best model found is: {}".format(
-                        scoring_func(tester.model, test_dataloader)
-                    )
-                )
+        # TODO. Do w
 
     else:
-        # rerun the best parameters
-        for (task_name, task_model, task_data, scoring_func) in tasks_to_evaluate:
-            print("=" * 60 + f"\nRunning {args.num_runs} tests for task : {task_name}")
-            # TODO: define the optimizer here
+        for task in tasks_to_evaluate:
 
-            # results[task_name] = Tester(args, task_name, task_model, task_data).run()
+            (task_name, task_model, train_dataset, test_dataset, scoring_func) = task
+
+            best_params = h.get_best_parameters(task_name)
+
             if args.optimizer == "all":
-                optims = list(helper.STR2OPTIM.values())
+                all_optimizers = h.str_2_optimizer.keys()
             else:
-                # single optimizer
-                optims = [args.optimizer]
-            for optim in optims:
-                tester = Tester(args, task_name, task_data, task_model, optim, params)
-                tester.run()
-                tester.log("./results/")
+                all_optimizers = [args.optimizer]
+
+            for optim_name in all_optimizers:
+
+                best_param = best_params[optim_name]
+
+                print(
+                    "=" * 60
+                    + f"\nEvaluate {task_name} with optim {optim_name} on {args.num_runs} runs with best parameters {best_param}. "
+                )
+
+                for i in range(args.num_runs):
+
+                    if args.verbose:
+                        print(f"{i}. run")
+
+                    tester = Tester(
+                        args=args,
+                        task_name=task_name,
+                        train_dataset=train_dataset,
+                        test_dataset=test_dataset,
+                        task_model=task_model,
+                        optimizer=optim_name,
+                        param=best_param,
+                        scoring_func=scoring_func,
+                        num_epochs=h.get_default_num_epochs(task_name),
+                    )
+
+                    tester.run()
 
 
 if __name__ == "__main__":
