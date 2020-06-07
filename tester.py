@@ -40,11 +40,16 @@ class Tester:
         Args:
             args: parsed arguments
             task_name: name of the task
-            task_train_dataset: train dataset
-            task_test_dataset: test dataset
+            train_dataset: train dataset
+            test_dataset: test dataset
             task_model: model constructor for the network that performs decently on the current dataset
-            optim: torch optimizer used
+            optimizer: name of the optimizer used (Adam, AdamW, SGD)
             param: dict of parameters for the model/dataset/optimizer combination
+            scoring_func: Callable, a function that given a model and a dataloader (hence with labels)
+                returns the score (accuracy).
+            num_epochs: max number of epochs the model is going to be trained for. (if do_cv is true when performing run)
+                then num_epochs is the max set by the command line argument --num_epochs. If do_cv is false, then use
+                the num_epochs specified in the file best_param).
         """
         self.args = args
         self.task_name = task_name
@@ -71,11 +76,10 @@ class Tester:
         """
         Compute the loss by summing the loss of all batches
         Args:
-            model: the model used to compute the loss
-            loader: the testing data
-            criterion: the loss function
+            dataloader: the data upon which to compute the loss
         Returns:
-            loss: the average loss given by criterion(loader)/len(dataset)
+            loss: the average loss given by criterion(dataloader)/len(dataloader).
+                Note that actually the len of the dataloader is the number of batches, not the len of the dataset.
         """
 
         assert type(dataloader) == torch.utils.data.DataLoader
@@ -96,12 +100,12 @@ class Tester:
 
     def cross_validation(self, kfold: bool):
         """
-        Performs k-fold cross validation.
-
         Performs k-fold cross validation on the data provided, on the model and optimizer specified.
+        Can be done either by performing k-fold cross validation, either by splitting k times the test and train data
+        at random.
 
         Args:
-            k: int, the argument for k-cross validation.
+            kfold: bool: set it to true if you want to perform k-fold cross validation.
             ... 
         Returns:
             val_losses: 2-dimensional array 
@@ -173,8 +177,6 @@ class Tester:
         Run through all batches in the input dataset, and perform forward and backward pass.
         Args:
             dataloader: the data loader upon which to compute one epoch (training data)
-            criterion: the loss function
-            optimizer: the optimizer used (Adam, SGD, AdamW)
         Returns:
             loss: float, the loss of the training dataset (averaged on the length of the dataset itself)
         """
@@ -199,7 +201,7 @@ class Tester:
         self,
         train_dataloader: torch.utils.data.DataLoader,
         val_dataloader: torch.utils.data.DataLoader,
-        with_early_stopping,
+        with_early_stopping: bool,
     ):
         """
         Effectively train the model
@@ -207,12 +209,16 @@ class Tester:
         Say that val_dataloader is optional.
 
         Args:
-            ...
+            train_dataloader: training dataloader
+            val_dataloader: testing dataloader, it can be optional (when we train the final model, we only have the
+                test dataloader, not a validation one).
+            with_early_stopping: Stop the model using early stopping criterion. We don't want to do so when we are
+                training the final model with best parameters (the number of epochs is fixed in this case).
         Returns:
             train_losses: a list of training loss for each epoch
             train_accuracies: a list of accuracies for each epoch
-            val_losses: a list of validation loss for each epoch
-            val_accuracies: a list of validation accuracies for each epoch
+            val_losses: a list of validation loss for each epoch (Returned only if val_dataloader is not null)
+            val_accuracies: a list of validation accuracies for each epoch (Returned only if val_dataloader is not null)
         """
 
         assert type(train_dataloader) == torch.utils.data.DataLoader
@@ -272,6 +278,9 @@ class Tester:
         By default, train on the whole train_dataset and test on the test_dataset and store the changes in the log.
 
         If do_cv is set to True, train with cross_validation and return the mean of the loss and the score, as well as the optimal number of epochs.
+        Args:
+            do_cv: boolean, set to True if you want to perform cross validation, otherwise it will run the
+                model once (usually, using the best parameters found with grid search)
         """
 
         if not do_cv:
