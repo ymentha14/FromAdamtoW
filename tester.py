@@ -332,6 +332,7 @@ class Tester:
             test_accuracies=test_accuracies,
             optimizer=self.optim_name,
             param=self.param,
+            num_epochs=self.num_epochs,  # Meaningful only when test_losses and test_accuracies are not None.
         )
 
         return (train_losses, train_accuracies, val_losses, val_accuracies)

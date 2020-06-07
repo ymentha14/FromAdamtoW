@@ -283,23 +283,26 @@ def log(
     test_losses: list,
     test_accuracies: list,
     optimizer: str,
-    param,
+    param: object,
+    num_epochs: int,
 ):
     """append the scores of the current run to the json in log_path
 
     Log the cross validation results (train and validation accuracy and losses, as a 2-dimensional list divided by attempt and epoch). Set the cross_validation flag to true.
 
     Args:
-        train_losses: 
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        train_accuracies:
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        val_losses: 
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        val_accuracies: 
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        optimizer: 
-            name of the optimizer (Adam, AdamW, SGD).
+        log_filepath: the path for the log file (specific for every task)
+        task_name: str, name of the task (images_cls, text_cls, speech_cls)
+        train_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
+        train_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
+        val_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
+        val_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
+        test_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
+        test_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
+        optimizer: name of the optimizer (Adam, AdamW, SGD).
+        param: object with hyperparameters for the optimizer tested (lr, betas, momentum etc)
+        num_epochs: int, number of epochs the model has been run when training using best params.
+            It is meaningful only when test_accuracies and test_losses are not none.
     """
 
     log_path_posix = Path(log_filepath)
@@ -324,6 +327,7 @@ def log(
 
     new_record["optimizer"] = str(optimizer)
     new_record["param"] = str(param)
+    new_record["num_epochs"] = num_epochs
 
     with open(log_filepath, "r") as f:
         old_log = json.load(f)
