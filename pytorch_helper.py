@@ -94,7 +94,7 @@ class EarlyStopping:
         else:
             if self.verbose:
                 print(
-                    f"\t\tEarlyStopping: score improve ({self.best_score} -> {new_score} score)"
+                    "\t\tEarlyStopping: score improve ({:.2f} -> {:.2f} score)".format(self.best_score,new_score)
                 )
             self.best_score = new_score
             self.counter = 0
