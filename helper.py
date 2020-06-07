@@ -58,11 +58,11 @@ def get_log_filepath(task_name: str):
 
 
 def get_default_num_epochs(task_name: str):
-
+    # TODO: fine tune it for the specific task! Write Done when you did and remove the todo!
     task_2_numepochs = {  # Map from task name to param file.
         "text_cls": 10,
         "speech_cls": 10,
-        "images_cls": 4,
+        "images_cls": 150,  # Done
     }
 
     return task_2_numepochs[task_name]
@@ -80,35 +80,12 @@ def parse_arguments():
         "Valid values: text_cls, speech_cls, images_cls.",
     )
 
-    parser.add_argument(
-        "--max_cross_validation_epochs",
-        help=f"Maximal number of epochs to use in cross-validation training. Default 100.",
-        default=100,
-        type=int,
-    )
-
     # (2): Second phase: more executions (in order to obtain a robust estimate) and longer ones.
     parser.add_argument(
         "--optimizer",
         default="all",
         help="By default experiment with all optimizers. When specified, execute a specific optimizer. "
         "Valid values: 'Adam', 'AdamW', 'SGD' or 'all'. Incompatible with parameter param_file.",
-    )
-
-    parser.add_argument(
-        "--learning_rate",
-        help="Learning rate. If not specified, the model will use the best learning "
-        "rate found during cross-validation.",
-        default=None,
-        type=float,
-    )
-
-    parser.add_argument(
-        "--num_epochs",
-        help="Number of epochs to train. If not specified, "
-        "the model will use the best number found during cross-validation.",
-        default=100,
-        type=int,
     )
 
     parser.add_argument(
@@ -158,7 +135,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--patience", help="Patience to use for early stopping", default=7, type=int,
+        "--patience",
+        help="Patience to use for early stopping. Default is 7.",
+        default=7,
+        type=int,
     )
 
     parser.add_argument(
@@ -303,23 +283,26 @@ def log(
     test_losses: list,
     test_accuracies: list,
     optimizer: str,
-    param,
+    param: object,
+    num_epochs: int,
 ):
     """append the scores of the current run to the json in log_path
 
     Log the cross validation results (train and validation accuracy and losses, as a 2-dimensional list divided by attempt and epoch). Set the cross_validation flag to true.
 
     Args:
-        train_losses: 
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        train_accuracies:
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        val_losses: 
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        val_accuracies: 
-            2-dimensional list indexed by attempt (k-fold) and epoch
-        optimizer: 
-            name of the optimizer (Adam, AdamW, SGD).
+        log_filepath: the path for the log file (specific for every task)
+        task_name: str, name of the task (images_cls, text_cls, speech_cls)
+        train_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
+        train_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
+        val_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
+        val_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
+        test_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
+        test_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
+        optimizer: name of the optimizer (Adam, AdamW, SGD).
+        param: object with hyperparameters for the optimizer tested (lr, betas, momentum etc)
+        num_epochs: int, number of epochs the model has been run when training using best params.
+            It is meaningful only when test_accuracies and test_losses are not none.
     """
 
     log_path_posix = Path(log_filepath)
@@ -344,6 +327,7 @@ def log(
 
     new_record["optimizer"] = str(optimizer)
     new_record["param"] = str(param)
+    new_record["num_epochs"] = num_epochs
 
     with open(log_filepath, "r") as f:
         old_log = json.load(f)

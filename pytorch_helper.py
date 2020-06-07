@@ -127,7 +127,8 @@ def get_dataloader(
     dataset: torch.utils.data.Dataset, batch_size, task_name, shuffle=True
 ):
     """
-    Return a dataloader given a dataset. Task name should be specified as some task (for instance) text, need special threatments.
+    Return a dataloader given a dataset. Task name should be specified as some task (for instance text),
+    need special treatments.
     """
 
     collate_fn = None
