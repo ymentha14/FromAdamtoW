@@ -26,6 +26,7 @@ Python version required >= 3.6
 
 - [ ] Best params file should be created automatically after CV. For now, we need to look at the results and pick the final best params. 
 - [ ] Global get_scoring_function ?
+- [ ] Add sample size under log
 
 **Text classification**
 
