@@ -8,3 +8,4 @@ speech_clsf.ipynb
 *.pyc
 .idea
 __pycache__/
+venv

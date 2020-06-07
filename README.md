@@ -20,10 +20,12 @@ Python version required >= 3.6
 
 **TODO**
 
-- Early stopping ?
-- Scheduler ? https://pytorch.org/docs/master/_modules/torch/optim/lr_scheduler.html#StepLR
-- Automatically download wav files.
-- 'best_X' could be created automatically
+- [ ] Scheduler https://pytorch.org/docs/master/_modules/torch/optim/lr_scheduler.html#StepLR, study/understand scheduler.  
+
+- [ ] Automatically download wav files in the correct folder (Yann?)
+
+- [ ] Best params file should be created automatically after CV. For now, we need to look at the results and pick the final best params. 
+- [ ] Global get_scoring_function ?
 
 **Text classification**
 
@@ -34,10 +36,14 @@ Dataset:
 **IDEA**
 
 - Study the relation with EarlyStopping ?
-command used : 
 
+**Command**
 
-python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
+```bash
+
+[ ] python3 main.py --task_name speech_cls --grid_search --verbose --num_epochs=1
+
+```
 
 
 **VERIFY the following**

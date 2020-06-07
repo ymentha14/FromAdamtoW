@@ -244,5 +244,65 @@
         ],
         "optimizer": "Adam",
         "param": "{'lr': 0.001, 'beta1': 0.9, 'beta2': 0.999}"
+    },
+    {
+        "date": "06_07_20-09_52_29",
+        "task_name": "images_cls",
+        "train_losses": [
+            [
+                0.05139771915972233,
+                0.019315539970993997,
+                0.012261578310281039,
+                0.008906070552766323
+            ]
+        ],
+        "train_accuracies": [
+            [
+                89.25,
+                92.125,
+                96.625,
+                97.25
+            ]
+        ],
+        "val_losses": null,
+        "val_accuracies": null,
+        "test_losses": [
+            0.017478189989924432
+        ],
+        "test_accuracies": [
+            87.5
+        ],
+        "optimizer": "Adam",
+        "param": "{'lr': 0.001, 'beta1': 0.9, 'beta2': 0.999}"
+    },
+    {
+        "date": "06_07_20-09_52_43",
+        "task_name": "images_cls",
+        "train_losses": [
+            [
+                0.04921622946858406,
+                0.020836566910147666,
+                0.012374108536168932,
+                0.008494151243939995
+            ]
+        ],
+        "train_accuracies": [
+            [
+                84.5,
+                94.375,
+                96.625,
+                97.75
+            ]
+        ],
+        "val_losses": null,
+        "val_accuracies": null,
+        "test_losses": [
+            0.01566544659435749
+        ],
+        "test_accuracies": [
+            89.5
+        ],
+        "optimizer": "Adam",
+        "param": "{'lr': 0.001, 'beta1': 0.9, 'beta2': 0.999}"
     }
 ]

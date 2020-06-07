@@ -125,7 +125,10 @@ class Tester:
 
         if kfold:
             split = ph.split_kfold(
-                dataset=self.train_dataset, k=self.args.k, batch_size=self.batch_size
+                dataset=self.train_dataset,
+                k=self.args.k,
+                batch_size=self.batch_size,
+                task_name=self.task_name,
             )
         else:
             split = ph.split_k_times(
@@ -133,6 +136,7 @@ class Tester:
                 k=self.args.k,
                 batch_size=self.batch_size,
                 train_ratio=self.args.train_size_ratio,
+                task_name=self.task_name,
             )
 
         for i, (train_dataloader_cv, val_dataloader_cv) in enumerate(split):
@@ -211,6 +215,8 @@ class Tester:
             val_accuracies: a list of validation accuracies for each epoch
         """
 
+        assert type(train_dataloader) == torch.utils.data.DataLoader
+
         # Recreate the model
         model = self.model_constructor()
 
@@ -270,8 +276,8 @@ class Tester:
 
         if not do_cv:
 
-            train_dataloader = torch.utils.data.DataLoader(
-                self.train_dataset, batch_size=self.batch_size, shuffle=True
+            train_dataloader = ph.get_dataloader(
+                self.train_dataset, self.batch_size, self.task_name
             )
 
             train_losses, train_accuracies = self._train(
@@ -283,8 +289,8 @@ class Tester:
             train_losses = [train_losses]
             train_accuracies = [train_accuracies]
 
-            test_dataloader = torch.utils.data.DataLoader(
-                self.test_dataset, batch_size=self.batch_size, shuffle=True
+            test_dataloader = ph.get_dataloader(
+                self.test_dataset, self.batch_size, self.task_name
             )
 
             test_losses = [self.compute_loss(dataloader=test_dataloader)]
