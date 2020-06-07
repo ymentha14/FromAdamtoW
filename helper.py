@@ -58,11 +58,11 @@ def get_log_filepath(task_name: str):
 
 
 def get_default_num_epochs(task_name: str):
-
+    # TODO: fine tune it for the specific task! Write Done when you did and remove the todo!
     task_2_numepochs = {  # Map from task name to param file.
         "text_cls": 10,
         "speech_cls": 10,
-        "images_cls": 4,
+        "images_cls": 150,  # Done
     }
 
     return task_2_numepochs[task_name]
@@ -80,35 +80,12 @@ def parse_arguments():
         "Valid values: text_cls, speech_cls, images_cls.",
     )
 
-    parser.add_argument(
-        "--max_cross_validation_epochs",
-        help=f"Maximal number of epochs to use in cross-validation training. Default 100.",
-        default=100,
-        type=int,
-    )
-
     # (2): Second phase: more executions (in order to obtain a robust estimate) and longer ones.
     parser.add_argument(
         "--optimizer",
         default="all",
         help="By default experiment with all optimizers. When specified, execute a specific optimizer. "
         "Valid values: 'Adam', 'AdamW', 'SGD' or 'all'. Incompatible with parameter param_file.",
-    )
-
-    parser.add_argument(
-        "--learning_rate",
-        help="Learning rate. If not specified, the model will use the best learning "
-        "rate found during cross-validation.",
-        default=None,
-        type=float,
-    )
-
-    parser.add_argument(
-        "--num_epochs",
-        help="Number of epochs to train. If not specified, "
-        "the model will use the best number found during cross-validation.",
-        default=100,
-        type=int,
     )
 
     parser.add_argument(
@@ -158,7 +135,10 @@ def parse_arguments():
     )
 
     parser.add_argument(
-        "--patience", help="Patience to use for early stopping", default=7, type=int,
+        "--patience",
+        help="Patience to use for early stopping. Default is 7.",
+        default=7,
+        type=int,
     )
 
     parser.add_argument(
