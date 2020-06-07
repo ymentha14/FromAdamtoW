@@ -14,7 +14,7 @@ from pathlib import Path
 
 from datetime import datetime
 
-STR2OPTIM = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD}
+str_2_optimizer = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD}
 
 
 def get_param_filepath(task_name: str, best: bool):
@@ -92,7 +92,7 @@ def parse_arguments():
         "--optimizer",
         default="all",
         help="By default experiment with all optimizers. When specified, execute a specific optimizer. "
-        "Valid values: Adam, AdamW, SGD or 'all'. Incompatible with parameter param_file.",
+        "Valid values: 'Adam', 'AdamW', 'SGD' or 'all'. Incompatible with parameter param_file.",
     )
 
     parser.add_argument(
@@ -113,8 +113,8 @@ def parse_arguments():
 
     parser.add_argument(
         "--num_runs",
-        help=f"Number of independent execution runs for the robust estimate. Default 10.",
-        default=10,
+        help=f"Number of independent execution runs for the robust estimate. Default 5.",
+        default=5,
     )
 
     parser.add_argument(
@@ -229,18 +229,7 @@ def adapt_params(params):
     return corr_params
 
 
-def get_device():
-    """
-    Get the device, CUDA or CPU depending on the machine availability.
-    Returns:
-        device: CUDA or CPU
-    """
-    use_cuda = torch.cuda.is_available()
-    device = torch.device("cuda" if use_cuda else "cpu")
-    return device
-
-
-def get_best_parameter(
+def compute_best_parameter(
     val_accuracies: np.array,
     best_param: object,
     best_cv_accuracy: float,
@@ -304,88 +293,6 @@ def get_best_parameter(
     return best_param, best_cv_epoch, best_cv_accuracy
 
 
-def log_results_deprecated_two(
-    results: object,
-    best_cv_epoch: int,
-    best_param: object,
-    optimizer: str,
-    log_file: str,
-):
-    """
-    Log the results to the specified file.
-    Object is a Python object, so it can be saved directly as a json.
-    log are going to be appended at the end of the log file, in order to avoid losing data.
-    data, the json taken by the file, must be a list (so it should be initialized as an empty list).
-    Args:
-        results: json with results (accuracy and loss per each parameter)
-        best_cv_epoch: int, the best epoch to train the model-optimizer combination
-        best_param: the best parameter found for the optimizer
-        optimizer: the optimizer used
-        log_file: path to the log file
-    """
-    try:
-        with open(log_file, "r") as json_file:
-            data = json.loads(json_file.read())
-        # print(data)
-        if not data:
-            data = []
-    except:  # Should everything bad happen, just re-initialize it with an empty list.
-        print("Something went wrong with the log file!")
-        data = []
-    data.append(
-        {
-            "results": results,
-            "best_cv_epoch": best_cv_epoch,
-            "best_param": best_param,
-            "optimizer": optimizer,
-            "cross_validation": False,  # This is the best result, not one of the many cross validation attempts
-        }
-    )
-    with open(log_file, "w") as json_file:
-        json.dump(data, json_file)
-
-
-def log_results_deprecated(
-    task_name: str,
-    train_losses: list,
-    train_accuracies: list,
-    val_losses: list,
-    val_accuracies: list,
-    optimizer: str,
-    param,
-):
-    """
-    Log the cross validation results (train and validation accuracy and losses, as a 2-dimensional list
-    divided by attempt and epoch). Set the cross_validation flag to true.
-    Args:
-        train_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
-        train_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
-        val_losses: 2-dimensional list indexed by attempt (k-fold) and epoch
-        val_accuracies: 2-dimensional list indexed by attempt (k-fold) and epoch
-        optimizer: name of the optimizer (Adam, AdamW, SGD).
-        log_file: name of the log file
-    """
-
-    log_filename = TASK2LOGFILE[task_name]
-
-    with open(log_filename, "r") as json_file:
-        data = json.loads(json_file.read())
-    if not data:
-        data = []
-    data.append(
-        {
-            "train_losses": train_losses,
-            "train_accuracies": train_accuracies,
-            "val_losses": val_losses,
-            "val_accuracies": val_accuracies,
-            "optimizer": optimizer,
-            "param": param,
-        }
-    )
-    with open(log_filename, "w") as json_file:
-        json.dump(data, json_file)
-
-
 def log(
     log_filepath: str,
     task_name: str,
@@ -393,95 +300,65 @@ def log(
     train_accuracies: list,
     val_losses: list,
     val_accuracies: list,
+    test_losses: list,
+    test_accuracies: list,
     optimizer: str,
     param,
 ):
-    """append the scores of the current run to the json in log_path"""
+    """append the scores of the current run to the json in log_path
+
+    Log the cross validation results (train and validation accuracy and losses, as a 2-dimensional list divided by attempt and epoch). Set the cross_validation flag to true.
+
+    Args:
+        train_losses: 
+            2-dimensional list indexed by attempt (k-fold) and epoch
+        train_accuracies:
+            2-dimensional list indexed by attempt (k-fold) and epoch
+        val_losses: 
+            2-dimensional list indexed by attempt (k-fold) and epoch
+        val_accuracies: 
+            2-dimensional list indexed by attempt (k-fold) and epoch
+        optimizer: 
+            name of the optimizer (Adam, AdamW, SGD).
+    """
 
     log_path_posix = Path(log_filepath)
     if not log_path_posix.exists():
         with open(log_filepath, "w") as f:
-            json.dump({}, f, indent=4)
+            json.dump([], f, indent=4)
 
-    date = datetime.now().strftime("%m_%d_%y-%H_%M")
+    date = datetime.now().strftime("%m_%d_%y-%H_%M_%S")
 
-    log_data = {}
+    new_record = {}
 
-    log_data["task_name"] = task_name
-    log_data["train_losses"] = train_losses
-    log_data["train_accuracies"] = train_accuracies
+    new_record["date"] = date
+    new_record["task_name"] = task_name
+    new_record["train_losses"] = train_losses
+    new_record["train_accuracies"] = train_accuracies
 
-    log_data["val_losses"] = val_losses
-    log_data["val_accuracies"] = val_accuracies
+    new_record["val_losses"] = val_losses
+    new_record["val_accuracies"] = val_accuracies
 
-    log_data["optimizer"] = str(optimizer)
-    log_data["param"] = str(param)
+    new_record["test_losses"] = test_losses
+    new_record["test_accuracies"] = test_accuracies
 
-    new_data = {date: log_data}
+    new_record["optimizer"] = str(optimizer)
+    new_record["param"] = str(param)
 
     with open(log_filepath, "r") as f:
         old_log = json.load(f)
 
-    old_log.update(new_data)
+    old_log.append(new_record)
+
     with open(log_filepath, "w") as f:
         json.dump(old_log, f, indent=4)
 
 
-def split_train_test(dataset, train_ratio):
+def get_best_parameters(task_name):
     """
-    Split dataset into two parts
-    """
-
-    train_size = int(train_ratio * len(dataset))
-    test_size = len(dataset) - train_size
-
-    train_dataset, test_dataset = torch.utils.data.random_split(
-        dataset, [train_size, test_size]
-    )
-    return train_dataset, test_dataset
-
-
-def split_kfold(dataset, k, batch_size):
-    """
-    Split the dataset with k-fold
-
-    Return an iterable (generator) where each element is a tuple (train_dataloader, val_dataloader) with batch_size batch_size
+    Return JSON containing the best parameters.
     """
 
-    kfold = KFold(n_splits=k)
-
-    for train_index, val_index in kfold.split(dataset):
-
-        train_dataset = Subset(dataset, train_index)
-        val_dataset = Subset(dataset, val_index)
-
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
-        )
-
-        val_dataloader = torch.utils.data.DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=True
-        )
-
-        yield (train_dataloader, val_dataloader)
-
-
-def split_k_times(dataset, k, batch_size, train_ratio):
-    """
-    Split the dataset k-times with a given train ratio
-
-    Return an iterable (generator)
-    """
-
-    for _ in range(k):
-        train_dataset, val_dataset = split_train_test(dataset, train_ratio)
-
-        train_dataloader = torch.utils.data.DataLoader(
-            train_dataset, batch_size=batch_size, shuffle=True
-        )
-
-        val_dataloader = torch.utils.data.DataLoader(
-            val_dataset, batch_size=batch_size, shuffle=True
-        )
-
-        yield (train_dataloader, val_dataloader)
+    filepath = get_param_filepath(task_name, best=True)
+    with open(filepath, "r") as f:
+        return json.load(f)

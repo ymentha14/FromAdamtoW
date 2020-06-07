@@ -13,9 +13,9 @@ from torch.utils.data import Subset
 from torch.nn.modules.loss import _WeightedLoss
 from torch.utils.data.sampler import SubsetRandomSampler
 
-import helper
 import helper as h
-from early_stopping import EarlyStopping
+import pytorch_helper as ph
+from pytorch_helper import EarlyStopping
 
 
 class Tester:
@@ -49,19 +49,21 @@ class Tester:
         self.args = args
         self.task_name = task_name
         self.train_dataset = train_dataset
-        self.test_datset = test_dataset
+        self.test_dataset = test_dataset
         self.model_constructor = task_model
 
         self.optim_name = optimizer
         self.param = param
         self.compute_score = lambda dataloader: scoring_func(self.model, dataloader)
 
-        self.device = h.get_device()
+        self.device = ph.get_device()
         self.patience = args.patience
         self.batch_size = args.batch_size  # TODO make it custom for each task.
 
         self.criterion_constructor = nn.CrossEntropyLoss
-        self.optimizer_constructor = h.STR2OPTIM[optimizer]  # TODO we can do it early
+        self.optimizer_constructor = h.str_2_optimizer[
+            optimizer
+        ]  # TODO we can do it early
 
         self.num_epochs = num_epochs
 
@@ -122,11 +124,11 @@ class Tester:
         val_accuracies = []
 
         if kfold:
-            split = helper.split_kfold(
+            split = ph.split_kfold(
                 dataset=self.train_dataset, k=self.args.k, batch_size=self.batch_size
             )
         else:
-            split = helper.split_k_times(
+            split = ph.split_k_times(
                 dataset=self.train_dataset,
                 k=self.args.k,
                 batch_size=self.batch_size,
@@ -272,9 +274,9 @@ class Tester:
                 self.train_dataset, batch_size=self.batch_size, shuffle=True
             )
 
-            train_losses, train_accuracies = self.train(
+            train_losses, train_accuracies = self._train(
                 train_dataloader=train_dataloader,
-                test_dataloader=None,
+                val_dataloader=None,
                 with_early_stopping=False,
             )
 
@@ -285,9 +287,12 @@ class Tester:
                 self.test_dataset, batch_size=self.batch_size, shuffle=True
             )
 
-            test_loss = [self.compute_loss(dataloader=test_dataloader)]
+            test_losses = [self.compute_loss(dataloader=test_dataloader)]
 
-            test_acc = [self.compute_score(dataloader=test_dataloader)]
+            test_accuracies = [self.compute_score(dataloader=test_dataloader)]
+
+            val_losses = None
+            val_accuracies = None
 
         else:
             (
@@ -297,14 +302,19 @@ class Tester:
                 val_accuracies,
             ) = self.cross_validation(kfold=False)
 
+            test_losses = None
+            test_accuracies = None
+
         # In the end: log!
-        helper.log(
-            log_filepath=helper.get_log_filepath(self.task_name),
+        h.log(
+            log_filepath=h.get_log_filepath(self.task_name),
             task_name=self.task_name,
             train_losses=train_losses,
             train_accuracies=train_accuracies,
             val_losses=val_losses,
             val_accuracies=val_accuracies,
+            test_losses=test_losses,
+            test_accuracies=test_accuracies,
             optimizer=self.optim_name,
             param=self.param,
         )

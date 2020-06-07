@@ -38,3 +38,8 @@ command used :
 
 
 python3 main.py --params_file=./params/params.json --task_name=speech_cls --cross_validation --verbose --num_epochs=1
+
+
+**VERIFY the following**
+
+- [ ] _optimizer name_s should be 'Adam', 'AdamW' and 'SGD'.

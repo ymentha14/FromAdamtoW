@@ -10,6 +10,7 @@ from torchvision import datasets, transforms
 import torch.nn.functional as F
 
 import helper
+import pytorch_helper as ph
 
 
 class Cnn(nn.Module):
@@ -48,7 +49,7 @@ def get_model():
     return Cnn
 
 
-def _get_full_dataset(sample_size):
+def get_full_dataset(sample_size):
     """
     Return a DataLoader for the training data.
     Args:
@@ -103,11 +104,6 @@ def _get_full_dataset(sample_size):
     return full_dataset
 
 
-def get_train_test_dataset(seed: int, train_size_ratio: float, sample_size):
-    torch.manual_seed(seed)
-    return helper.split_train_test(_get_full_dataset(sample_size), train_size_ratio)
-
-
 def get_scoring_function():
     """
     Returns the function that computes the score, given the model and the data (as a torch DataLoader).
@@ -117,7 +113,7 @@ def get_scoring_function():
     """
 
     def accuracy(model: nn.Module, data: torch.utils.data.DataLoader):
-        device = helper.get_device()
+        device = ph.get_device()
         model.eval()  # Define we are going to evaluate the model! No idea why, Pytorch stuff
         model.to(device=device)
         correct = 0

@@ -9,7 +9,7 @@ import torch
 from torch.utils.data.dataloader import DataLoader
 from torch.utils.data.dataset import Subset
 
-import helper
+
 from pathlib import Path
 import numpy as np
 
@@ -17,6 +17,9 @@ from tasks import images_cls
 from tasks import speech_cls
 from tasks import text_cls
 from tester import Tester
+
+import helper as h
+import pytorch_helper as ph
 
 
 def grid_search(task, args):
@@ -28,11 +31,11 @@ def grid_search(task, args):
     if args.verbose:
         print("=" * 60 + f"\nGrid Search for tasks : {task_name}")
 
-    param_filename = helper.get_param_filepath(task_name, best=False)
+    param_filename = h.get_param_filepath(task_name, best=False)
 
     print(param_filename)
 
-    combinations = helper.get_params_combinations(param_filename)
+    combinations = h.get_params_combinations(param_filename)
 
     # start of the grid search
     if args.verbose:
@@ -61,7 +64,7 @@ def grid_search(task, args):
                 optimizer=optim,
                 param=param,
                 scoring_func=scoring_func,
-                num_epochs=helper.get_default_num_epochs(task_name),
+                num_epochs=h.get_default_num_epochs(task_name),
             )
 
             # Run the cross validation phase
@@ -70,7 +73,7 @@ def grid_search(task, args):
             )
 
             # Update the best parameter combination, if the accuracy for this cross validation phase is higher
-            (best_param, best_cv_epoch, best_cv_accuracy,) = helper.get_best_parameter(
+            (best_param, best_cv_epoch, best_cv_accuracy,) = h.get_best_parameter(
                 val_accuracies,
                 best_param,
                 best_cv_accuracy,
@@ -99,7 +102,7 @@ def main():
     """
 
     # Get arguments
-    args = helper.parse_arguments()
+    args = h.parse_arguments()
 
     # Set the torch seed
     torch.manual_seed(args.seed)
@@ -107,11 +110,12 @@ def main():
     tasks_to_evaluate = []
 
     if args.task_name == "images_cls" or args.task_name == "all":
+
         task = (
             "images_cls",
             images_cls.get_model(),
-            *images_cls.get_train_test_dataset(
-                args.seed, args.train_size_ratio, args.sample_size
+            *ph.split_train_test(
+                images_cls.get_full_dataset(args.sample_size), args.train_size_ratio
             ),
             images_cls.get_scoring_function(),
         )
@@ -121,8 +125,8 @@ def main():
         task = (
             "speech_cls",
             speech_cls.get_model(),
-            *speech_cls.get_train_test_dataset(
-                args.seed, args.train_size_ratio, args.sample_size
+            *ph.split_train_test(
+                speech_cls.get_full_dataset(args.sample_size), args.train_size_ratio
             ),
             speech_cls.get_scoring_function(),
         )
@@ -132,8 +136,8 @@ def main():
         task = (
             "text_cls",
             text_cls.get_model(),
-            *text_cls.get_train_test_dataset(
-                args.seed, args.train_size_ratio, args.sample_size
+            *ph.split_train_test(
+                text_cls.get_full_dataset(args.sample_size), args.train_size_ratio
             ),
             text_cls.get_scoring_function(),
         )
@@ -149,22 +153,47 @@ def main():
         for task in tasks_to_evaluate:
             best_params = grid_search(task, args)
 
-    else:
-        # rerun the best parameters
-        for (task_name, task_model, task_data, scoring_func) in tasks_to_evaluate:
-            print("=" * 60 + f"\nRunning {args.num_runs} tests for task : {task_name}")
-            # TODO: define the optimizer here
+        # TODO. Do w
 
-            # results[task_name] = Tester(args, task_name, task_model, task_data).run()
+    else:
+        for task in tasks_to_evaluate:
+
+            (task_name, task_model, train_dataset, test_dataset, scoring_func) = task
+
+            best_params = h.get_best_parameters(task_name)
+
             if args.optimizer == "all":
-                optims = list(helper.STR2OPTIM.values())
+                all_optimizers = h.str_2_optimizer.keys()
             else:
-                # single optimizer
-                optims = [args.optimizer]
-            for optim in optims:
-                tester = Tester(args, task_name, task_data, task_model, optim, params)
-                tester.run()
-                tester.log("./results/")
+                all_optimizers = [args.optimizer]
+
+            for optim_name in all_optimizers:
+
+                best_param = best_params[optim_name]
+
+                print(
+                    "=" * 60
+                    + f"\nEvaluate {task_name} with optim {optim_name} on {args.num_runs} runs with best parameters {best_param}. "
+                )
+
+                for i in range(args.num_runs):
+
+                    if args.verbose:
+                        print(f"{i}. run")
+
+                    tester = Tester(
+                        args=args,
+                        task_name=task_name,
+                        train_dataset=train_dataset,
+                        test_dataset=test_dataset,
+                        task_model=task_model,
+                        optimizer=optim_name,
+                        param=best_param,
+                        scoring_func=scoring_func,
+                        num_epochs=h.get_default_num_epochs(task_name),
+                    )
+
+                    tester.run()
 
 
 if __name__ == "__main__":
