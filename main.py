@@ -69,8 +69,30 @@ def grid_search(task, args):
             )
 
             # Run the cross validation phase
-            (train_losses, train_accuracies, val_losses, val_accuracies,) = tester.run(
-                do_cv=True
+            (
+                train_losses,
+                train_accuracies,
+                val_losses,
+                val_accuracies,
+                test_losses,
+                test_accuracies,
+            ) = tester.run(do_cv=True)
+
+            # In the end: log!
+            h.log(
+                log_filepath=h.get_log_filepath(task_name),
+                task_name=task_name,
+                train_losses=train_losses,
+                train_accuracies=train_accuracies,
+                val_losses=val_losses,
+                val_accuracies=val_accuracies,
+                test_losses=test_losses,
+                test_accuracies=test_accuracies,
+                optimizer=optim,
+                param=param,
+                num_epochs=h.get_default_num_epochs(
+                    task_name
+                ),  # Meaningful only when test_losses and test_accuracies are not None.
             )
 
             # Update the best parameter combination if we specified the --overwrite_best_param argument
@@ -81,14 +103,13 @@ def grid_search(task, args):
                 best_cv_accuracy=best_cv_accuracy,
                 param=param,
                 optimizer=optim,
-                verbose=True
+                verbose=True,
             )
         best_params_per_optimizer[optim] = {
-            "num_epoch": best_cv_epoch,
-            "param": best_param
+            "num_epochs": best_cv_epoch,
+            "param": best_param,
         }
     return best_params_per_optimizer
-
 
 
 def main():
@@ -159,7 +180,11 @@ def main():
             best_params = grid_search(task, args)
             if args.overwrite_best_param:
                 if args.verbose:
-                    print("Override best parameters for task {} with {}".format(task[0], best_params))
+                    print(
+                        "Override best parameters for task {} with {}".format(
+                            task[0], best_params
+                        )
+                    )
                 # We want to overwrite the best parameters
                 h.override_best_parameters(task[0], best_params)
 
@@ -183,9 +208,13 @@ def main():
 
                 print(
                     "=" * 60
-                    + f"\nEvaluate {task_name} with optim {optim_name} on {args.num_runs} runs with best parameters {best_param}. "
+                    + f"\nEvaluate {task_name} with optim {optim_name} on {args.num_runs} runs with best parameters"
+                    f" {best_param['param']} for {best_param['num_epochs']} epochs."
                 )
-
+                total_train_losses = []
+                total_train_accuracies = []
+                total_test_losses = []
+                total_test_accuracies = []
                 for i in range(args.num_runs):
 
                     if args.verbose:
@@ -198,12 +227,39 @@ def main():
                         test_dataset=test_dataset,
                         task_model=task_model,
                         optimizer=optim_name,
-                        param=best_param,
+                        param=best_param["param"],
                         scoring_func=scoring_func,
-                        num_epochs=h.get_default_num_epochs(task_name),
+                        num_epochs=best_param["num_epochs"],
                     )
 
-                    tester.run()
+                    (
+                        train_losses,
+                        train_accuracies,
+                        val_losses,
+                        val_accuracies,
+                        test_losses,
+                        test_accuracies,
+                    ) = tester.run()
+                    total_train_losses.append(train_losses)
+                    total_train_accuracies.append(train_accuracies)
+                    total_test_losses.append(test_losses)
+                    total_test_accuracies.append(test_accuracies)
+
+                    # In the end: log!
+                h.log(
+                    log_filepath=h.get_log_filepath(task_name),
+                    task_name=task_name,
+                    train_losses=total_train_losses,
+                    train_accuracies=total_train_accuracies,
+                    val_losses=None,
+                    val_accuracies=None,
+                    test_losses=total_test_losses,
+                    test_accuracies=total_test_accuracies,
+                    optimizer=optim_name,
+                    param=best_param["param"],
+                    num_epochs=best_param["num_epochs"],
+                    # Meaningful only when test_losses and test_accuracies are not None.
+                )
 
 
 if __name__ == "__main__":

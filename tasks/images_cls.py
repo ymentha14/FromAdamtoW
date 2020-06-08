@@ -17,9 +17,7 @@ class Cnn(nn.Module):
     # The network is a CNN, with one convolutional layer, dropout, and 2 fully connected layers
     def __init__(self, dropout: float = 0.5):
         super(Cnn, self).__init__()
-        self.conv1 = nn.Conv2d(
-            1, 32, 5, 1
-        )  # Kernel size of 5, TODO: it may be a good parameter to optimize with
+        self.conv1 = nn.Conv2d(1, 32, 5, 1)  # Kernel size of 5,
         self.dropout1 = nn.Dropout2d(dropout)
         # The size is computed as 32 (filters) * 24 (height after applying kernel) * 24 (width after applying kernel)
         self.fc1 = nn.Linear(18432, 500)
@@ -76,7 +74,7 @@ def get_full_dataset(sample_size):
         ),
         batch_size=64,
         shuffle=True,
-        **kwargs,  # TODO, necessary ?
+        **kwargs,
     )
     test_loader = torch.utils.data.DataLoader(
         datasets.MNIST(
@@ -88,7 +86,7 @@ def get_full_dataset(sample_size):
         ),
         batch_size=64,
         shuffle=True,
-        **kwargs,  # TODO, necessary ?
+        **kwargs,
     )
     # TODO. Maybe we can directly return Dataset instead of DataLoader and then compute back ?
     full_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])

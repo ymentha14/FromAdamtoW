@@ -210,15 +210,14 @@ class Tester:
 
         Args:
             train_dataloader: training dataloader
-            val_dataloader: testing dataloader, it can be optional (when we train the final model, we only have the
-                test dataloader, not a validation one).
+            val_dataloader: testing dataloader
             with_early_stopping: Stop the model using early stopping criterion. We don't want to do so when we are
                 training the final model with best parameters (the number of epochs is fixed in this case).
         Returns:
             train_losses: a list of training loss for each epoch
             train_accuracies: a list of accuracies for each epoch
-            val_losses: a list of validation loss for each epoch (Returned only if val_dataloader is not null)
-            val_accuracies: a list of validation accuracies for each epoch (Returned only if val_dataloader is not null)
+            val_losses: a list of validation loss for each epoch
+            val_accuracies: a list of validation accuracies for each epoch
         """
 
         assert type(train_dataloader) == torch.utils.data.DataLoader
@@ -288,27 +287,17 @@ class Tester:
             train_dataloader = ph.get_dataloader(
                 self.train_dataset, self.batch_size, self.task_name
             )
-
-            train_losses, train_accuracies = self._train(
-                train_dataloader=train_dataloader,
-                val_dataloader=None,
-                with_early_stopping=False,
-            )
-
-            train_losses = [train_losses]
-            train_accuracies = [train_accuracies]
-
             test_dataloader = ph.get_dataloader(
                 self.test_dataset, self.batch_size, self.task_name
             )
-
-            test_losses = [self.compute_loss(dataloader=test_dataloader)]
-
-            test_accuracies = [self.compute_score(dataloader=test_dataloader)]
+            train_losses, train_accuracies, test_losses, test_accuracies = self._train(
+                train_dataloader=train_dataloader,
+                val_dataloader=test_dataloader,  # only used for computing statistics, not early stopping
+                with_early_stopping=False,
+            )
 
             val_losses = None
             val_accuracies = None
-
         else:
             (
                 train_losses,
@@ -320,19 +309,11 @@ class Tester:
             test_losses = None
             test_accuracies = None
 
-        # In the end: log!
-        h.log(
-            log_filepath=h.get_log_filepath(self.task_name),
-            task_name=self.task_name,
-            train_losses=train_losses,
-            train_accuracies=train_accuracies,
-            val_losses=val_losses,
-            val_accuracies=val_accuracies,
-            test_losses=test_losses,
-            test_accuracies=test_accuracies,
-            optimizer=self.optim_name,
-            param=self.param,
-            num_epochs=self.num_epochs,  # Meaningful only when test_losses and test_accuracies are not None.
+        return (
+            train_losses,
+            train_accuracies,
+            val_losses,
+            val_accuracies,
+            test_losses,
+            test_accuracies,
         )
-
-        return (train_losses, train_accuracies, val_losses, val_accuracies)

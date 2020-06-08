@@ -151,7 +151,7 @@ def parse_arguments():
     parser.add_argument(
         "--overwrite_best_param",
         help="If we are performing grid_search and we specify this parameter, the parameter in best_'task'.json will "
-             "be updated with the best parameters found with the current grid search.",
+        "be updated with the best parameters found with the current grid search.",
         action="store_true",
     )
 
