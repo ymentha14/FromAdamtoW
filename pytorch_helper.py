@@ -75,11 +75,14 @@ class EarlyStopping:
         self.val_loss_min = np.Inf
         self.delta = delta
 
-    def __call__(self, new_score, model):
+    def __call__(self, new_score, model,epoch=""):
+        """
+        epoch (str): information about the epoch as '(n/N)' with n the current run and N the total runs
+        """
 
         if self.best_score is None:
             if self.verbose:
-                print(f"\t\tEarlyStopping: set initial ({new_score} score)")
+                print(f"\t\t{epoch}EarlyStopping: set initial ({new_score} score)")
             self.best_score = new_score
             # self.save_checkpoint(val_loss, model)
         elif new_score < self.best_score + self.delta:
@@ -87,14 +90,14 @@ class EarlyStopping:
             self.counter += 1
             if self.verbose:
                 print(
-                    f"\t\tEarlyStopping counter: {self.counter} out of {self.patience}"
+                    f"\t\t{epoch}EarlyStopping counter: {self.counter} out of {self.patience}"
                 )
             if self.counter >= self.patience:
                 self.early_stop = True
         else:
             if self.verbose:
                 print(
-                    "\t\tEarlyStopping: score improve ({:.2f} -> {:.2f} score)".format(self.best_score,new_score)
+                    "\t\t{}EarlyStopping: score improve ({:.2f} -> {:.2f} score)".format(epoch,self.best_score,new_score)
                 )
             self.best_score = new_score
             self.counter = 0

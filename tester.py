@@ -261,7 +261,7 @@ class Tester:
 
             if with_early_stopping:
                 early_stopping(
-                    val_accuracy_cv, self.model
+                    val_accuracy_cv, self.model,f"({epoch+1}/{self.num_epochs}):"
                 )  # Check early stopping, using last val accuracy
                 if early_stopping.early_stop:
                     print("Early stopping")
