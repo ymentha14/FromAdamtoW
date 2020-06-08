@@ -8,3 +8,4 @@ torchaudio==0.5.0
 speechpy==2.4
 pandas==1.0.3
 wget==3.2
+speechpy==2.4
