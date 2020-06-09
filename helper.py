@@ -60,7 +60,7 @@ def get_log_filepath(task_name: str):
 def get_default_num_epochs(task_name: str):
     # TODO: fine tune it for the specific task! Write Done when you did and remove the todo!
     task_2_numepochs = {  # Map from task name to param file.
-        "text_cls": 10,
+        "text_cls": 50,  # do not touch
         "speech_cls": 20,
         "images_cls": 150,  # Done
     }
