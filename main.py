@@ -21,6 +21,8 @@ from tester import Tester
 import helper as h
 import pytorch_helper as ph
 
+import random
+
 
 def grid_search(task, args):
     """
@@ -78,23 +80,6 @@ def grid_search(task, args):
                 test_accuracies,
             ) = tester.run(do_cv=True)
 
-            # In the end: log!
-            h.log(
-                log_filepath=h.get_log_filepath(task_name),
-                task_name=task_name,
-                train_losses=train_losses,
-                train_accuracies=train_accuracies,
-                val_losses=val_losses,
-                val_accuracies=val_accuracies,
-                test_losses=test_losses,
-                test_accuracies=test_accuracies,
-                optimizer=optim,
-                param=param,
-                num_epochs=h.get_default_num_epochs(
-                    task_name
-                ),  # Meaningful only when test_losses and test_accuracies are not None.
-            )
-
             # Update the best parameter combination if we specified the --overwrite_best_param argument
             best_param, best_cv_epoch, best_cv_accuracy = h.compute_best_parameter(
                 val_accuracies=val_accuracies,
@@ -106,7 +91,7 @@ def grid_search(task, args):
                 verbose=True,
             )
         best_params_per_optimizer[optim] = {
-            "num_epochs": best_cv_epoch,
+            "num_epoch": best_cv_epoch,
             "param": best_param,
         }
     return best_params_per_optimizer
@@ -132,6 +117,8 @@ def main():
 
     # Set the torch seed
     torch.manual_seed(args.seed)
+    torch.manual_seed(args.seed)
+    random.seed(args.seed)
 
     tasks_to_evaluate = []
 
@@ -195,7 +182,7 @@ def main():
 
             (task_name, task_model, train_dataset, test_dataset, scoring_func) = task
 
-            best_params = h.get_best_parameters(task_name)
+            best_params_task = h.get_best_parameters(task_name)
 
             if args.optimizer == "all":
                 all_optimizers = h.str_2_optimizer.keys()
@@ -204,62 +191,28 @@ def main():
 
             for optim_name in all_optimizers:
 
-                best_param = best_params[optim_name]
+                best_param_optim = best_params_task[optim_name]
+                best_num_epochs = best_params_task["num_epochs"]
 
                 print(
                     "=" * 60
                     + f"\nEvaluate {task_name} with optim {optim_name} on {args.num_runs} runs with best parameters"
-                    f" {best_param['param']} for {best_param['num_epochs']} epochs."
+                    f" {best_param_optim} for {best_num_epochs} epochs."
                 )
-                total_train_losses = []
-                total_train_accuracies = []
-                total_test_losses = []
-                total_test_accuracies = []
-                for i in range(args.num_runs):
 
-                    if args.verbose:
-                        print(f"{i}. run")
-
-                    tester = Tester(
-                        args=args,
-                        task_name=task_name,
-                        train_dataset=train_dataset,
-                        test_dataset=test_dataset,
-                        task_model=task_model,
-                        optimizer=optim_name,
-                        param=best_param["param"],
-                        scoring_func=scoring_func,
-                        num_epochs=best_param["num_epochs"],
-                    )
-
-                    (
-                        train_losses,
-                        train_accuracies,
-                        val_losses,
-                        val_accuracies,
-                        test_losses,
-                        test_accuracies,
-                    ) = tester.run()
-                    total_train_losses.append(train_losses)
-                    total_train_accuracies.append(train_accuracies)
-                    total_test_losses.append(test_losses)
-                    total_test_accuracies.append(test_accuracies)
-
-                    # In the end: log!
-                h.log(
-                    log_filepath=h.get_log_filepath(task_name),
+                tester = Tester(
+                    args=args,
                     task_name=task_name,
-                    train_losses=total_train_losses,
-                    train_accuracies=total_train_accuracies,
-                    val_losses=None,
-                    val_accuracies=None,
-                    test_losses=total_test_losses,
-                    test_accuracies=total_test_accuracies,
+                    train_dataset=train_dataset,
+                    test_dataset=test_dataset,
+                    task_model=task_model,
                     optimizer=optim_name,
-                    param=best_param["param"],
-                    num_epochs=best_param["num_epochs"],
-                    # Meaningful only when test_losses and test_accuracies are not None.
+                    param=best_param_optim,
+                    scoring_func=scoring_func,
+                    num_epochs=best_num_epochs,
                 )
+
+                tester.run(num_runs=args.num_runs)
 
 
 if __name__ == "__main__":

@@ -260,7 +260,7 @@ class Tester:
 
             if with_early_stopping:
                 early_stopping(
-                    val_accuracy_cv, self.model,f"({epoch+1}/{self.num_epochs}):"
+                    val_accuracy_cv, self.model, f"({epoch+1}/{self.num_epochs}):"
                 )  # Check early stopping, using last val accuracy
                 if early_stopping.early_stop:
                     print("Early stopping")
@@ -270,7 +270,7 @@ class Tester:
             return train_losses, train_accuracies, val_losses, val_accuracies
         return train_losses, train_accuracies
 
-    def run(self, do_cv: bool = False) -> Optional[List[int]]:
+    def run(self, do_cv: bool = False, num_runs: int = 0) -> Optional[List[int]]:
         """
         Run the tester.
 
@@ -283,21 +283,30 @@ class Tester:
         """
 
         if not do_cv:
+            for i in range(num_runs):
 
-            train_dataloader = ph.get_dataloader(
-                self.train_dataset, self.batch_size, self.task_name
-            )
-            test_dataloader = ph.get_dataloader(
-                self.test_dataset, self.batch_size, self.task_name
-            )
-            train_losses, train_accuracies, test_losses, test_accuracies = self._train(
-                train_dataloader=train_dataloader,
-                val_dataloader=test_dataloader,  # only used for computing statistics, not early stopping
-                with_early_stopping=False,
-            )
+                if self.args.verbose:
+                    print(f"{i} run.")
 
-            val_losses = None
-            val_accuracies = None
+                train_dataloader = ph.get_dataloader(
+                    self.train_dataset, self.batch_size, self.task_name
+                )
+                test_dataloader = ph.get_dataloader(
+                    self.test_dataset, self.batch_size, self.task_name
+                )
+                (
+                    train_losses,
+                    train_accuracies,
+                    test_losses,
+                    test_accuracies,
+                ) = self._train(
+                    train_dataloader=train_dataloader,
+                    val_dataloader=test_dataloader,  # only used for computing statistics, not early stopping
+                    with_early_stopping=False,
+                )
+
+                val_losses = None
+                val_accuracies = None
         else:
             (
                 train_losses,
@@ -308,6 +317,20 @@ class Tester:
 
             test_losses = None
             test_accuracies = None
+
+        h.log(
+            log_filepath=h.get_log_filepath(self.task_name),
+            task_name=self.task_name,
+            train_losses=train_losses,
+            train_accuracies=train_accuracies,
+            val_losses=val_losses,
+            val_accuracies=val_accuracies,
+            test_losses=test_losses,
+            test_accuracies=test_accuracies,
+            optimizer=self.optim_name,
+            param=self.param,
+            num_epochs=self.num_epochs,
+        )
 
         return (
             train_losses,
