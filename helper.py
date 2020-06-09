@@ -314,6 +314,7 @@ def log(
 
     log_path_posix = Path(log_filepath)
     if not log_path_posix.exists():
+        print("Creating a new log file.")
         with open(log_filepath, "w") as f:
             json.dump([], f, indent=4)
 
