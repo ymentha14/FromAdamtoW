@@ -149,6 +149,7 @@ class Tester:
                 print(f"\tRun {i}-split.")
 
             (
+                train_time_epoch,
                 train_losses_cv,
                 train_accuracies_cv,
                 val_losses_cv,
@@ -228,7 +229,7 @@ class Tester:
         # Send model to CUDA or CPU
         self.model = model.to(self.device)
 
-        if args.verbose:
+        if self.args.verbose:
             print("Model is on CUDA: ", next(model.parameters()).is_cuda)
 
         self.criterion = self.criterion_constructor()
