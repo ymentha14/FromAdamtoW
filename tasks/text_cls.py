@@ -171,8 +171,6 @@ def get_full_dataset(sample_size: int = None):
 
     full_dataset = ConcatDataset([train_dataset, test_dataset])
 
-    print(f"sample size: {sample_size}")
-
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
         # TODO. Define it in a function.

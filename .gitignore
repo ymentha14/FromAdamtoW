@@ -9,3 +9,4 @@ speech_clsf.ipynb
 .idea
 __pycache__/
 venv
+log
