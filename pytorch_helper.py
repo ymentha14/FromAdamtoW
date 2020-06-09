@@ -85,7 +85,7 @@ class EarlyStopping:
                 print(f"\t\t{epoch}EarlyStopping: set initial ({new_score} score)")
             self.best_score = new_score
             # self.save_checkpoint(val_loss, model)
-        elif new_score < self.best_score + self.delta:
+        elif new_score <= self.best_score + self.delta:
             # No improvement recorded
             self.counter += 1
             if self.verbose:
