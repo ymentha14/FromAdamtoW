@@ -91,8 +91,6 @@ def get_full_dataset(sample_size):
     # TODO. Maybe we can directly return Dataset instead of DataLoader and then compute back ?
     full_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])
 
-    print(f"sample size: {sample_size}")
-
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
         # TODO. Define it in a function.
