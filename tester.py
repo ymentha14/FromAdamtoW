@@ -236,6 +236,7 @@ class Tester:
 
         train_losses = []
         train_accuracies = []
+        train_time_epoch = []
 
         if val_dataloader:
             val_losses = []
@@ -246,6 +247,8 @@ class Tester:
         )
 
         for epoch in range(self.num_epochs):
+
+            start_time = time.time()
 
             loss = self._run_one_epoch(train_dataloader)
             train_losses.append(loss)
@@ -266,9 +269,19 @@ class Tester:
                     print("Early stopping")
                     break
 
+            end_time = time.time()
+            train_time = end_time - start_time
+            train_time_epoch.append(train_time)
+
         if val_dataloader:
-            return train_losses, train_accuracies, val_losses, val_accuracies
-        return train_losses, train_accuracies
+            return (
+                train_time_epoch,
+                train_losses,
+                train_accuracies,
+                val_losses,
+                val_accuracies,
+            )
+        return train_time_epoch, train_losses, train_accuracies
 
     def run(self, do_cv: bool = False, num_runs: int = 0) -> Optional[List[int]]:
         """
@@ -295,6 +308,7 @@ class Tester:
                     self.test_dataset, self.batch_size, self.task_name
                 )
                 (
+                    train_time_epochs,
                     train_losses,
                     train_accuracies,
                     test_losses,
@@ -309,6 +323,7 @@ class Tester:
                 val_accuracies = None
         else:
             (
+                train_time_epochs,
                 train_losses,
                 train_accuracies,
                 val_losses,
@@ -330,6 +345,7 @@ class Tester:
             optimizer=self.optim_name,
             param=self.param,
             num_epochs=self.num_epochs,
+            train_time_epochs=train_time_epochs,
         )
 
         return (

@@ -292,6 +292,7 @@ def log(
     optimizer: str,
     param: object,
     num_epochs: int,
+    train_time_epochs: list,
 ):
     """append the scores of the current run to the json in log_path
 
@@ -336,6 +337,8 @@ def log(
     new_record["optimizer"] = str(optimizer)
     new_record["param"] = str(param)
     new_record["num_epochs"] = num_epochs
+
+    new_record["train_time_epochs"] = train_time_epochs
 
     with open(log_filepath, "r") as f:
         old_log = json.load(f)
