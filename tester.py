@@ -127,6 +127,8 @@ class Tester:
         val_losses = []
         val_accuracies = []
 
+        all_train_time_epochs = []
+
         if kfold:
             split = ph.split_kfold(
                 dataset=self.train_dataset,
@@ -165,8 +167,10 @@ class Tester:
 
             val_losses.append(val_losses_cv)
             val_accuracies.append(val_accuracies_cv)
+            all_train_time_epochs.append(train_time_epoch)
 
         return (
+            all_train_time_epochs,
             train_losses,
             train_accuracies,
             val_losses,
