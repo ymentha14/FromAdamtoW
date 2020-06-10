@@ -91,7 +91,7 @@ def grid_search(task, args):
                 verbose=True,
             )
         best_params_per_optimizer[optim] = {
-            "num_epoch": best_cv_epoch,
+            "num_epochs": best_cv_epoch,
             "param": best_param,
         }
     return best_params_per_optimizer
@@ -192,7 +192,7 @@ def main():
             for optim_name in all_optimizers:
 
                 best_param_optim = best_params_task[optim_name]
-                best_num_epochs = best_params_task["num_epochs"]
+                best_num_epochs = best_param_optim["num_epochs"]
 
                 print(
                     "=" * 60
@@ -207,7 +207,7 @@ def main():
                     test_dataset=test_dataset,
                     task_model=task_model,
                     optimizer=optim_name,
-                    param=best_param_optim,
+                    param=best_param_optim["param"],
                     scoring_func=scoring_func,
                     num_epochs=best_num_epochs,
                 )
