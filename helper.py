@@ -92,6 +92,7 @@ def parse_arguments():
         "--num_runs",
         help=f"Number of independent execution runs for the robust estimate. Default 5.",
         default=5,
+        type=int,
     )
 
     parser.add_argument(
