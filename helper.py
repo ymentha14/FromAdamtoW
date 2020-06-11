@@ -368,3 +368,17 @@ def override_best_parameters(task_name: str, best_param: object):
     filepath = get_param_filepath(task_name, best=True)
     with open(filepath, "w") as f:
         json.dump(best_param, f, indent=4)
+
+
+def get_sample(sample_size: int, full_dataset: torch.utils.data.DataLoader):
+    """
+    Get a random sample of the given size of the full dataset
+    Args:
+        sample_size: int, the size of the random sample
+        full_dataset: dataloader with the full dataset.
+
+    Returns:
+        sample: a subset of the full dataset, of size sample size.
+    """
+    indices = np.random.permutation(len(full_dataset))[:sample_size]
+    return torch.utils.data.Subset(full_dataset, indices)

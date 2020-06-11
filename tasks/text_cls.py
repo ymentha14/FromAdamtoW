@@ -12,6 +12,7 @@ from torchtext.datasets import text_classification
 from torch.utils.data.dataset import ConcatDataset
 
 import pytorch_helper as ph
+import helper
 
 BATCH_SIZE = 16
 
@@ -173,8 +174,6 @@ def get_full_dataset(sample_size: int = None):
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
-        # TODO. Define it in a function.
-        indices = np.random.permutation(len(full_dataset))[:sample_size]
-        full_dataset = Subset(full_dataset, indices)
+        full_dataset = helper.get_sample(sample_size)
 
     return full_dataset

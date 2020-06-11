@@ -25,6 +25,12 @@ class Cnn(nn.Module):
         self.fc2 = nn.Linear(500, 10)
 
     def forward(self, x):
+        """
+        Simple forward method for the specified neural network.
+        Args:
+            x: the input
+        Returns: output prediction
+        """
         x = self.conv1(x)
         x = F.relu(x)
         # x = F.max_pool2d(x, 2)
@@ -47,9 +53,9 @@ def get_model():
     return Cnn
 
 
-def get_full_dataset(sample_size):
+def get_full_dataset(sample_size=None) -> torch.utils.DataLoader:
     """
-    Return a DataLoader for the training data.
+    Returns a DataLoader for the MNIST data.
     Args:
         sample_size: int, take a sample of smaller size in order to train faster. None: take all sample
     Returns:
@@ -88,14 +94,11 @@ def get_full_dataset(sample_size):
         shuffle=True,
         **kwargs,
     )
-    # TODO. Maybe we can directly return Dataset instead of DataLoader and then compute back ?
     full_dataset = ConcatDataset([train_loader.dataset, test_loader.dataset])
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
-        # TODO. Define it in a function.
-        indices = np.random.permutation(len(full_dataset))[:sample_size]
-        full_dataset = Subset(full_dataset, indices)
+        full_dataset = helper.get_sample(sample_size)
 
     return full_dataset
 
