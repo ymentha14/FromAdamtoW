@@ -8,8 +8,6 @@ import pandas as pd
 import torch
 import torch.optim as optim
 
-from sklearn.model_selection import KFold
-
 from pathlib import Path
 
 from datetime import datetime
@@ -17,11 +15,17 @@ from datetime import datetime
 str_2_optimizer = {"Adam": optim.Adam, "AdamW": optim.AdamW, "SGD": optim.SGD}
 
 
-def get_param_filepath(task_name: str, best: bool):
+def get_param_filepath(task_name: str, best: bool) -> str:
     """
-    Given a task_name, return it's params filename
-    """
+    Returns the correct file path for the json file with the best parameter or the grid search parameter,
+    according to the task name and the boolean best.
+    Args:
+        task_name: name of the task
+        best: True if we want the best_param, False if we want the grid_search params.
 
+    Returns:
+        string with the name of the parameter file, according to the task and best.
+    """
     if best:
 
         best_param = {  # Map from task name to param file.
@@ -43,11 +47,15 @@ def get_param_filepath(task_name: str, best: bool):
         return grid_search_param[task_name]
 
 
-def get_log_filepath(task_name: str):
+def get_log_filepath(task_name: str) -> str:
     """
-    ...
-    """
+    Get the log file name for the given task.
+    Args:
+        task_name: name of the task
 
+    Returns:
+        the name of the log json file.
+    """
     TASK2LOGFILE = {  # Map from task name to param file.
         "text_cls": "log/log_text_results.json",
         "speech_cls": "log/log_speech_results.json",
@@ -57,7 +65,16 @@ def get_log_filepath(task_name: str):
     return TASK2LOGFILE[task_name]
 
 
-def get_default_num_epochs(task_name: str):
+def get_default_num_epochs(task_name: str) -> int:
+    """
+    Default number of epochs specific for the task.
+    Since we are using early stopping, we can set it much higher than actually needed.
+    Args:
+        task_name: name of the task (images, text, speech)_cls
+
+    Returns:
+        number_of_epochs: the max number of epochs to use during grid search.
+    """
     # TODO: fine tune it for the specific task! Write Done when you did and remove the todo!
     task_2_numepochs = {  # Map from task name to param file.
         "text_cls": 50,  # do not touch
@@ -66,6 +83,25 @@ def get_default_num_epochs(task_name: str):
     }
 
     return task_2_numepochs[task_name]
+
+
+def get_default_batch_size(task_name: str) -> int:
+    """
+    Default batch size specific for the task.
+    Args:
+        task_name: name of the task (images, text, speech)_cls
+
+    Returns:
+        batch_size: the size of the batch for the specific task
+    """
+    # TODO: fine tune it for the specific task! Write Done when you did and remove the todo!
+    task_2_batch_size = {  # Map from task name to param file.
+        "text_cls": 32,
+        "speech_cls": 32,
+        "images_cls": 32,  # Done
+    }
+
+    return task_2_batch_size[task_name]
 
 
 def parse_arguments():
@@ -159,7 +195,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def get_params_combinations(path_to_json):
+def get_params_combinations(path_to_json: str) -> object:
     """
     create all the parameter combinations possible wrt to the values present in the json.
     
@@ -167,7 +203,7 @@ def get_params_combinations(path_to_json):
         path_to_json (str): relative path to json file for cross validation
         
     Returns:
-        Dictionnary of all possible combinations for each optimizer with the form:
+        Dictionary of all possible combinations for each optimizer with the form:
         >>> {'Adam':[
                         {'lr':0.01,'b1':0.04,'b2':0.03},
                         {'lr':0.01,'b1':0.04,'b2':0.04},
@@ -199,7 +235,7 @@ def get_params_combinations(path_to_json):
     return comb_tot
 
 
-def adapt_params(params):
+def adapt_params(params: object) -> object:
     """
     adapts the name of all params such that they match the ones from the pytorch
     
@@ -239,6 +275,10 @@ def compute_best_parameter(
          param: hyper parameters of the current model (which may become best_param)
          optimizer: optimizer used
          verbose: define True to print more information.
+    Returns:
+         best_param: object with best hyper parameters
+         best_cv_epoch: int best number of epochs
+         best_cv_accuracy: float best accuracy reached
     """
     # This builds a 2 columns dataframe, one column with epoch, the other with accuracy
     df = pd.DataFrame(val_accuracies).melt(var_name="Epochs", value_name="Accuracy")
@@ -350,7 +390,7 @@ def log(
         json.dump(old_log, f, indent=4)
 
 
-def get_best_parameters(task_name):
+def get_best_parameters(task_name: str):
     """
     Return JSON containing the best parameters.
     """
@@ -368,3 +408,19 @@ def override_best_parameters(task_name: str, best_param: object):
     filepath = get_param_filepath(task_name, best=True)
     with open(filepath, "w") as f:
         json.dump(best_param, f, indent=4)
+
+
+def get_sample(
+    sample_size: int, full_dataset: torch.utils.data.DataLoader
+) -> torch.utils.data.DataLoader:
+    """
+    Get a random sample of the given size of the full dataset
+    Args:
+        sample_size: int, the size of the random sample
+        full_dataset: dataloader with the full dataset.
+
+    Returns:
+        sample: a subset of the full dataset, of size sample size.
+    """
+    indices = np.random.permutation(len(full_dataset))[:sample_size]
+    return torch.utils.data.Subset(full_dataset, indices)

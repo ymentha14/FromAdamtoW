@@ -13,9 +13,11 @@ import zipfile
 import os
 import shutil
 
+import helper
+
 
 # url for the dataset
-url = 'http://emodb.bilderbar.info/download/download.zip'
+url = "http://emodb.bilderbar.info/download/download.zip"
 target_path = Path("./data/speech")
 data_path = target_path.joinpath("wav")
 
@@ -187,6 +189,7 @@ def get_model():
     # double necessary to work with the mfcc features
     return SpeechModel
 
+
 def get_scoring_function():
     """
     Returns the function that computes the score, given the model and the data (as a torch DataLoader).
@@ -214,6 +217,7 @@ def get_scoring_function():
 
     return accuracy
 
+
 def get_full_dataset(sample_size):
     """
     Return a DataLoader for the training data.
@@ -227,33 +231,30 @@ def get_full_dataset(sample_size):
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
-        # TODO. Define it in a function.
-        indices = np.random.permutation(len(full_dataset))[:sample_size]
-        full_dataset = Subset(full_dataset, indices)
+        full_dataset = helper.get_sample(sample_size, full_dataset)
 
     return full_dataset
-
 
 
 def download():
     """
     download the data from EMoDB website
     """
-    target_path.mkdir(parents=True,exist_ok=True)
+    target_path.mkdir(parents=True, exist_ok=True)
     zip_path = target_path.joinpath("download.zip")
 
     if data_path.exists():
         return None
 
-    if (not zip_path.exists()):
+    if not zip_path.exists():
         print("No existing zip file found: start downloading")
         wget.download(url, str(target_path))
 
-    with zipfile.ZipFile(str(zip_path), 'r') as zip_ref:
+    with zipfile.ZipFile(str(zip_path), "r") as zip_ref:
         print("Extracting zip file..")
         zip_ref.extractall(str(target_path))
-        
-    assert(data_path.exists())
+
+    assert data_path.exists()
     shutil.rmtree(str(target_path.joinpath("lablaut")))
     shutil.rmtree(str(target_path.joinpath("labsilb")))
     shutil.rmtree(str(target_path.joinpath("silb")))

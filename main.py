@@ -26,7 +26,17 @@ import random
 
 def grid_search(task, args):
     """
-    Compute grid search for the given task
+    Performs the grid search. Finds the best parameters for the given task and the given grid
+    Args:
+        task: a tuple with
+            task_name: str the name of the task (images_cls, text_cls, speech_cls)
+            task_model: torch.Module
+            train_dataset: torch.utils.data.DataLoader
+            test_dataset: not used here!
+            scoring_func: a lambda function that returns the score for a model and labeled data.
+    Returns:
+        best_params_per_optimizer: an object indexed by the optimizer name, with
+            the best parameters found using the grid search.
     """
     (task_name, task_model, train_dataset, X, scoring_func) = task
 
