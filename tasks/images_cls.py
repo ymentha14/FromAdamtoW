@@ -53,7 +53,7 @@ def get_model():
     return Cnn
 
 
-def get_full_dataset(sample_size=None) -> torch.utils.DataLoader:
+def get_full_dataset(sample_size=None) -> torch.utils.data.DataLoader:
     """
     Returns a DataLoader for the MNIST data.
     Args:
@@ -98,7 +98,7 @@ def get_full_dataset(sample_size=None) -> torch.utils.DataLoader:
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
-        full_dataset = helper.get_sample(sample_size)
+        full_dataset = helper.get_sample(sample_size, full_dataset)
 
     return full_dataset
 

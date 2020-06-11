@@ -231,7 +231,7 @@ def get_full_dataset(sample_size):
 
     if sample_size is not None:
         # If we want a smaller subset, we just sample a subset of the given size.
-        full_dataset = helper.get_sample(sample_size)
+        full_dataset = helper.get_sample(sample_size, full_dataset)
 
     return full_dataset
 

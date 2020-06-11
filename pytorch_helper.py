@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 
-def split_train_test(dataset: torch.utils.data.Data, train_ratio):
+def split_train_test(dataset: torch.utils.data.Dataset, train_ratio):
     """
     Split dataset into two parts
     """
