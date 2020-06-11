@@ -85,6 +85,25 @@ def get_default_num_epochs(task_name: str) -> int:
     return task_2_numepochs[task_name]
 
 
+def get_default_batch_size(task_name: str) -> int:
+    """
+    Default batch size specific for the task.
+    Args:
+        task_name: name of the task (images, text, speech)_cls
+
+    Returns:
+        batch_size: the size of the batch for the specific task
+    """
+    # TODO: fine tune it for the specific task! Write Done when you did and remove the todo!
+    task_2_batch_size = {  # Map from task name to param file.
+        "text_cls": 32,
+        "speech_cls": 32,
+        "images_cls": 32,  # Done
+    }
+
+    return task_2_batch_size[task_name]
+
+
 def parse_arguments():
     """Parses the global parameters from the command line arguments."""
 

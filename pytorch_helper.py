@@ -2,7 +2,7 @@ import torch
 import numpy as np
 
 
-def split_train_test(dataset, train_ratio):
+def split_train_test(dataset: torch.utils.data.Data, train_ratio):
     """
     Split dataset into two parts
     """
@@ -37,7 +37,13 @@ def split_kfold(dataset, k, batch_size, task_name):
         yield (train_dataloader, val_dataloader)
 
 
-def split_k_times(dataset, k, batch_size, train_ratio, task_name):
+def split_k_times(
+    dataset: torch.utils.data.Dataset,
+    k: int,
+    batch_size: int,
+    train_ratio: float,
+    task_name: str,
+):
     """
     Split the dataset k-times with a given train ratio
 
@@ -129,8 +135,8 @@ def generate_batch_text_cls(batch):
 
 
 def get_dataloader(
-    dataset: torch.utils.data.Dataset, batch_size, task_name, shuffle=True
-):
+    dataset: torch.utils.data.Dataset, batch_size: int, task_name: str, shuffle=True
+) -> torch.utils.data.DataLoader:
     """
     Return a dataloader given a dataset. Task name should be specified as some task (for instance text),
     need special treatments.
