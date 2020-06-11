@@ -16,22 +16,30 @@ sns.set()
 def augment_data(loss, N):
     """
     create additional fake data similar to loss with gaussian noise
+    
+    Args:
+        loss(list of float): losses from one run
+        N(int): number of simulated runs to create
     """
     return np.abs((np.random.normal(0, 0.0003, [N, 23]) + loss).T)
 
 
-def plot_losses_fits(losses, axes, colors):
+def plot_losses_fits(losses, axes, colors,fit=False,y_scale="log"):
     """
     Plot the fitted both on loglog and linear plots on top of the data.
     
     Args:
         losses(np.array of float): M X N_epochs with M the number of runs in the CV for the given parameter
         colors
+        y_scale (str): either "linear" or "log"
     """
+    
     # color 1 for the losses, color 2 for the fit
     color1, color2 = colors
     lin_ax = axes[0]
     log_ax = axes[1]
+    
+    lin_ax.set_yscale(y_scale)
 
     log_ax.set_yscale("log")
     log_ax.set_xscale("log")
@@ -42,7 +50,7 @@ def plot_losses_fits(losses, axes, colors):
     # we recreate the epochs
     x = np.expand_dims(np.arange(ex_loss.shape[0]) + 1, axis=1)
     x_log = np.log(x)
-    y_log = np.log(mean_loss)
+    y_log = np.log(losses)
 
     # the regression works in the logspace
     reg = LinearRegression().fit(x_log, y_log)
@@ -59,7 +67,11 @@ def plot_losses_fits(losses, axes, colors):
 
     lin_ax.plot(x, losses, color=color1, alpha=0.2)
     lin_ax.plot(x, mean_loss, color=color1, label="mean_runs")
-    lin_ax.plot(x, y_pred, color=color2, label="fitted exp curve")
+    
+    if fit:
+        lin_ax.plot(x, y_pred, color=color2, label="fitted exp curve")
+        log_ax.plot(x, y_pred, color=color2, label="fitted exp curve")
+
     lin_ax.legend()
     log_ax.plot(x, losses, color=color1, alpha=0.2)
     log_ax.plot(x, mean_loss, color=color1)
@@ -69,7 +81,6 @@ def plot_losses_fits(losses, axes, colors):
     log_ax.set_xlabel("Epochs")
     log_ax.set_ylabel("Cross Entropy Loss")
 
-    log_ax.plot(x, y_pred, color=color2)
 
     return reg
 
