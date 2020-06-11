@@ -391,7 +391,9 @@ def override_best_parameters(task_name: str, best_param: object):
         json.dump(best_param, f, indent=4)
 
 
-def get_sample(sample_size: int, full_dataset: torch.utils.data.DataLoader) -> torch.utils.data.DataLoader:
+def get_sample(
+    sample_size: int, full_dataset: torch.utils.data.DataLoader
+) -> torch.utils.data.DataLoader:
     """
     Get a random sample of the given size of the full dataset
     Args:

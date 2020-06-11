@@ -75,7 +75,7 @@ class EarlyStopping:
         self.val_loss_min = np.Inf
         self.delta = delta
 
-    def __call__(self, new_score, model,epoch=""):
+    def __call__(self, new_score, model, epoch=""):
         """
         epoch (str): information about the epoch as '(n/N)' with n the current run and N the total runs
         """
@@ -97,7 +97,9 @@ class EarlyStopping:
         else:
             if self.verbose:
                 print(
-                    "\t\t{}EarlyStopping: score improve ({:.2f} -> {:.2f} score)".format(epoch,self.best_score,new_score)
+                    "\t\t{}EarlyStopping: score improve ({:.2f} -> {:.2f} score)".format(
+                        epoch, self.best_score, new_score
+                    )
                 )
             self.best_score = new_score
             self.counter = 0
