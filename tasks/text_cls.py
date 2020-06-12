@@ -144,11 +144,11 @@ def get_train_test_dataset(sample_size: int = None):
     # create data folder in case it does not exist
     import os
 
-    if not os.path.isdir("./.data"):
-        os.mkdir("./.data")
+    if not os.path.isdir("./data"):
+        os.mkdir("./data")
 
     train_dataset, test_dataset = text_classification.DATASETS["AG_NEWS"](
-        root="./.data", ngrams=NGRAMS, vocab=None
+        root="./data", ngrams=NGRAMS, vocab=None
     )
 
     if sample_size is not None:
