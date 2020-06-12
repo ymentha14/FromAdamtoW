@@ -220,5 +220,29 @@ by counting the number of correct predictions over the total amount of predictio
 - [ ] Add sample size under log
 
 
+## implementation
+
+- Weights initialization: kept PyTorch default, Most layers are initialized using Kaiming Uniform method. Example layers include Linear, Conv2d, RNN etc. If you are using other layers, you should look up that layer on this doc. If it says weights are initialized using U(...) then its Kaiming Uniform method.
+--> say want to test in practice SDG vs. Adam vs. AdamW on most common scenario, where we assume practitioners does not change other default settings.
+
+One of Adagrad's main benefits is that it eliminates the need to manually tune the learning rate, since it adapts naturally over time. In fact, most implementations use a default value of 0.01.
+
+
+- "Pytorch, developed by Facebook AI Research and a team of collaborators, allows for rapid iteration and debugging"
+
+- Use of PyTorch: flexible and clear API, full control of the code, very modular.
+
+- Flexible structure ...
+
+- Didn't use any extra tools such as Pytorch-lightning or Skorch as they even super useful for certain task as they abstract and put the complexity away, they give less control over the code.
+
+According to Geoff Hinton: "Early stopping (is) beautiful free lunch"
+
+
+Our implementation Code: almost pure PyTorch, see the details on the README attached code. Emphasis on reproducibility, should be possible to produce the same exact results just by running the main file without arguments. \footnote{\texttt{python main.py}}
+
+
+
+
 ## Contributors
 Jonathan Besomi, Stefano Huber, Yann Mentha
