@@ -1,16 +1,28 @@
 {
-	"Adam": {
-		"lr": 0.001,
-		"beta1": 0.9,
-		"beta2": 0.999
-	},
-	"AdamW": {
-		"lr": 0.001,
-		"beta1": 0.99,
-		"beta2": 0.9
-	},
-	"SGD": {
-		"lr": 0.001
-	},
-	"num_epochs": 10
+    "Adam": {
+        "num_epochs": 22,
+        "param": {
+            "lr": 0.0005,
+            "beta1": 0.9,
+            "beta2": 0.999,
+            "weight_decay": 0
+        }
+    },
+    "AdamW": {
+        "num_epochs": 16,
+        "param": {
+            "lr": 0.0001,
+            "beta1": 0.9,
+            "beta2": 0.999,
+            "weight_decay": 0
+        }
+    },
+    "SGD": {
+        "num_epochs": 47,
+        "param": {
+            "lr": 0.01,
+            "momentum": 0,
+            "weight_decay": 0
+        }
+    }
 }
