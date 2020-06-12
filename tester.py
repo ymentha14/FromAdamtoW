@@ -20,7 +20,7 @@ from pytorch_helper import EarlyStopping
 
 class Tester:
     """
-    A tester needs to be run for one task: that is, for each dataset,optimizer and hyperparameter combination.
+    A tester needs to be run for one task: that is, for each dataset,optimizer and hyper-parameter combination.
     """
 
     def __init__(
@@ -63,12 +63,10 @@ class Tester:
 
         self.device = ph.get_device()
         self.patience = args.patience
-        self.batch_size = args.batch_size  # TODO make it custom for each task.
+        self.batch_size = h.get_default_batch_size(task_name)
 
         self.criterion_constructor = nn.CrossEntropyLoss
-        self.optimizer_constructor = h.str_2_optimizer[
-            optimizer
-        ]  # TODO we can do it early
+        self.optimizer_constructor = h.str_2_optimizer[optimizer]
 
         self.num_epochs = num_epochs
 
@@ -102,7 +100,7 @@ class Tester:
         """
         Performs k-fold cross validation on the data provided, on the model and optimizer specified.
         Can be done either by performing k-fold cross validation, either by splitting k times the test and train data
-        at random.
+        at random using a fixed ratio (different than 1/k).
 
         Args:
             kfold: bool: set it to true if you want to perform k-fold cross validation.
@@ -291,7 +289,7 @@ class Tester:
             )
         return train_time_epoch, train_losses, train_accuracies
 
-    def run(self, do_cv: bool = False, num_runs: int = 0) -> Optional[List[int]]:
+    def run(self, do_cv: bool = False, num_runs: int = 0):
         """
         Run the tester.
 
@@ -301,9 +299,19 @@ class Tester:
         Args:
             do_cv: boolean, set to True if you want to perform cross validation, otherwise it will run the
                 model once (usually, using the best parameters found with grid search)
+            num_runs: if we are testing (not doing cv), then we have to repeat num_runs times the experiment
         """
 
         if not do_cv:
+
+            train_time_epochs = []
+            train_losses = []
+            train_accuracies = []
+            val_losses = []
+            val_accuracies = []
+            test_losses = []
+            test_accuracies = []
+
             for i in range(num_runs):
 
                 if self.args.verbose:
@@ -316,19 +324,28 @@ class Tester:
                     self.test_dataset, self.batch_size, self.task_name
                 )
                 (
-                    train_time_epochs,
-                    train_losses,
-                    train_accuracies,
-                    test_losses,
-                    test_accuracies,
+                    train_time,
+                    train_loss,
+                    train_accuracy,
+                    test_loss,
+                    test_accuracy,
                 ) = self._train(
                     train_dataloader=train_dataloader,
                     val_dataloader=test_dataloader,  # only used for computing statistics, not early stopping
                     with_early_stopping=False,
                 )
 
-                val_losses = None
-                val_accuracies = None
+                val_loss = None
+                val_accuracy = None
+
+                train_time_epochs.append(train_time)
+                train_losses.append(train_loss)
+                train_accuracies.append(train_accuracy)
+                val_losses.append(val_loss)
+                val_accuracies.append(val_accuracy)
+                test_losses.append(test_loss)
+                test_accuracies.append(test_accuracy)
+
         else:
             (
                 train_time_epochs,
