@@ -303,6 +303,15 @@ class Tester:
         """
 
         if not do_cv:
+
+            train_time_epochs = []
+            train_losses = []
+            train_accuracies = []
+            val_losses = []
+            val_accuracies = []
+            test_losses = []
+            test_accuracies = []
+
             for i in range(num_runs):
 
                 if self.args.verbose:
@@ -315,19 +324,28 @@ class Tester:
                     self.test_dataset, self.batch_size, self.task_name
                 )
                 (
-                    train_time_epochs,
-                    train_losses,
-                    train_accuracies,
-                    test_losses,
-                    test_accuracies,
+                    train_time,
+                    train_loss,
+                    train_accuracy,
+                    test_loss,
+                    test_accuracy,
                 ) = self._train(
                     train_dataloader=train_dataloader,
                     val_dataloader=test_dataloader,  # only used for computing statistics, not early stopping
                     with_early_stopping=False,
                 )
 
-                val_losses = None
-                val_accuracies = None
+                val_loss = None
+                val_accuracy = None
+
+                train_time_epochs.append(train_time)
+                train_losses.append(train_loss)
+                train_accuracies.append(train_accuracy)
+                val_losses.append(val_loss)
+                val_accuracies.append(val_accuracy)
+                test_losses.append(test_loss)
+                test_accuracies.append(test_accuracy)
+
         else:
             (
                 train_time_epochs,
