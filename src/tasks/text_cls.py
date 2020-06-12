@@ -4,12 +4,9 @@ Text classification
 
 import torch
 import torch.nn as nn
-import numpy as np
 
-import torchtext
 from torch.utils.data.dataset import Subset
 from torchtext.datasets import text_classification
-from torch.utils.data.dataset import ConcatDataset
 
 import pytorch_helper as ph
 import helper
@@ -124,8 +121,6 @@ def get_scoring_function():
 """
 Load data
 """
-
-import torch.utils.data as tud
 
 
 def get_train_test_dataset(sample_size: int = None):

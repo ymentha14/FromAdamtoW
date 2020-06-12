@@ -8,13 +8,11 @@ from torch.utils.data import DataLoader
 from torch.utils.data import Dataset
 from speechpy.feature import mfcc
 import pytorch_helper as ph
+import helper
 import wget
 import zipfile
 import os
 import shutil
-
-import helper
-
 
 # url for the dataset
 url = "http://emodb.bilderbar.info/download/download.zip"
@@ -23,7 +21,6 @@ data_path = target_path.joinpath("wav")
 
 
 # useful dics to convert labels from german to english
-from torch.utils.data.dataset import Subset
 
 DE2EN = {
     "W": "A",  # Wut-Anger

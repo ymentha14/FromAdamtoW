@@ -2,15 +2,14 @@
 Images classification
 """
 
-import numpy as np
 import torch
 import torch.nn as nn
-from torch.utils.data.dataset import ConcatDataset, random_split, Subset
+from torch.utils.data.dataset import ConcatDataset
 from torchvision import datasets, transforms
 import torch.nn.functional as F
 
-import helper
 import pytorch_helper as ph
+import helper
 
 
 class Cnn(nn.Module):
