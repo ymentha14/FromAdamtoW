@@ -152,7 +152,7 @@ def parse_arguments():
 
     parser.add_argument(
         "--train_size_ratio",
-        help="Percentage of total data to use for training. Default is 0.8",
+        help="Percentage of total data to use for training. Default is 0.8. Does not apply to text_cls where train/test ratio is fixed.",
         default=0.8,
         type=float,
     )

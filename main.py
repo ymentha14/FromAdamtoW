@@ -159,9 +159,7 @@ def main():
         task = (
             "text_cls",
             text_cls.get_model(),
-            *ph.split_train_test(
-                text_cls.get_full_dataset(args.sample_size), args.train_size_ratio
-            ),
+            *text_cls.get_train_test_dataset(args.sample_size),
             text_cls.get_scoring_function(),
         )
         tasks_to_evaluate.append(task)

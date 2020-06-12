@@ -14,8 +14,6 @@ from torch.utils.data.dataset import ConcatDataset
 import pytorch_helper as ph
 import helper
 
-BATCH_SIZE = 16
-
 
 class TextClassifier(nn.Module):
     def __init__(
@@ -24,7 +22,7 @@ class TextClassifier(nn.Module):
         embed_dim=64,
         num_classes=4,
         hidden_dim=8,
-        n_layers=1,
+        n_layers=2,
         bidirectional=True,
         dropout=0.1,
         rnn_type="lstm",
@@ -39,9 +37,9 @@ class TextClassifier(nn.Module):
             self.rnn = nn.LSTM(
                 embed_dim,
                 hidden_dim,
-                num_layers=2,
-                bidirectional=True,
-                dropout=0.1,
+                num_layers=n_layers,
+                bidirectional=bidirectional,
+                dropout=dropout,
                 batch_first=True,
             )
         else:
@@ -62,18 +60,6 @@ class TextClassifier(nn.Module):
         self.dropout = nn.Dropout(dropout)
 
         self.with_rnn = with_rnn
-
-        self.init_weights()
-
-    def init_weights(self):
-        initrange = 0.5
-        self.embedding.weight.data.uniform_(-initrange, initrange)
-
-        self.fc_with_rnn.weight.data.uniform_(-initrange, initrange)
-        self.fc_with_rnn.bias.data.zero_()
-
-        self.fc_with_embed.weight.data.uniform_(-initrange, initrange)
-        self.fc_with_embed.bias.data.zero_()
 
     def forward(self, x_batch):
 
@@ -142,7 +128,7 @@ Load data
 import torch.utils.data as tud
 
 
-def get_full_dataset(sample_size: int = None):
+def get_train_test_dataset(sample_size: int = None):
     """
     Return Dataset
 
@@ -166,14 +152,6 @@ def get_full_dataset(sample_size: int = None):
     )
 
     if sample_size is not None:
-        # Sample a subset of the given size.
-        indices = np.random.permutation(len(train_dataset))[:sample_size]
-        train_dataset = Subset(train_dataset, indices)
+        train_dataset = helper.get_sample(sample_size, train_dataset)
 
-    full_dataset = ConcatDataset([train_dataset, test_dataset])
-
-    if sample_size is not None:
-        # If we want a smaller subset, we just sample a subset of the given size.
-        full_dataset = helper.get_sample(sample_size, full_dataset)
-
-    return full_dataset
+    return train_dataset, test_dataset
