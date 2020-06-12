@@ -143,7 +143,7 @@ def plot_losses_fits(losses,
         ax.plot(x_mean,mean_loss,color=color1,label = f'Mean {label}')
     ax.set_xlabel("Epochs")
     ax.set_ylabel("Cross Entropy Loss")
-    ax.legend()    
+    ax.legend(handlelength=5, handleheight=3)    
     
     return reg
 
