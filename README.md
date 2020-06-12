@@ -118,6 +118,7 @@ then train `num_runs` times the same model and save the results. We train the mo
 ### Image classification
 [MNIST dataset](http://yann.lecun.com/exdb/mnist/)
 28x28 greyscale images of 60000 training handwritten digits from 0 to 9, with a test size of 10000 images.
+The train and test split has been kept to 6/7, to resemble the original MNIST settings (60000 training images and 10000 validation ones).
 
 ### Speech classification
 [Berlin Database of Emotional Speech](http://emodb.bilderbar.info/start.html)
