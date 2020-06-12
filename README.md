@@ -12,7 +12,7 @@ best hyper parameters for each specific optimizer, and to run the experiment wit
 such optimal parameters.
 
 Particular effort has been paid to the modularity of the code and
-to achieve unbiased results.
+to achieve unbiased and reproducible results.
 
 
 ## Usage
@@ -41,7 +41,7 @@ in order to provide more accurate results (with variance). Default 5.
 - ```--grid_search```: instead of running the experiment, run the grid search to
 look for the best hyper parameters for every task. Default False
 -  ```--verbose```: print useful information during training. Default False.
-- ```--sample_size```: provide and int to limit the size of the dataset. Useful to 
+- ```--sample_size```: provide an int to limit the size of the dataset. Useful to 
 speed up the training execution. By default it uses all dataset.
 - ```--train_size_ratio```: percentage of data to use for training. 
 By default ```0.8```.
@@ -49,7 +49,8 @@ By default ```0.8```.
 - ```--seed```: the random seed. Specify it if you want to have random results, 
 but consistent among different runs. By default ```42```.
 - ```--patience```: we use early stopping to limit the time used to decree that
-the model has converged, instead of waiting until we have run all the epochs. 
+the model has converged while performing grid search, instead of waiting until we
+have run all the epochs. 
 Patience is the number of epochs to wait until no improvement is recorded. 
 When ```patience``` epochs have elapsed, we assume the model has converged. 
 By default 7.
@@ -69,7 +70,7 @@ ideal hyper parameters specific for every task. After having run such experiment
 we store the results achieved during the training phase in a log file 
 `log/log_{task_name}.json`, so that we can extract valuable information like
 the test accuracy and loss for every epoch of training, in order to analyze
-statistically the figures using `Analyze Results.ipynb`, and come to a conclusion on
+statistically the figures using `notebooks/visu_stat.ipynb`, and come to a conclusion on
 the superiority of AdamW over the other optimizers.
 
 We found such scheduling to be convenient:
@@ -150,13 +151,15 @@ for the three optimizers.
 Since this process is very time consuming, the authors have already provided a
 `best_{task}.json` fine tuned after having run a grid of approximately 
 30 different combinations, so that after having pulled the repo, you can directly
-jump to the next more interesting step. 
+jump to the more interesting testing phase.
 
 
 ### Extraction of best parameters
-After having run the grid search, it is time to analyze the results in order to 
-extract the best hyper parameters. We do it using the helper 
-`compute_best_parameter()`. This function receives for every optimizer a list of 
+After having run the grid search, if the option `--overwrite_best_param` is true,
+then it is time to analyze the results in order to 
+extract the best hyper parameters to store in `best_{task}.json`.
+We do it using the helper `compute_best_parameter()`.
+This function receives for every optimizer a list of 
 observations for the validation accuracies among the various epochs of training.
 
 We decided to take as best parameter combination the one that had the highest 
@@ -166,13 +169,13 @@ our model for, which is a very important information to know during the test pha
 
 Lastly we decided to discard epochs that were not reached by all attempts, even if 
 the accuracy for that epoch was the highest for such hyper-parameters combination.
-This choice was done since we believed that if not all observations reached such epoch
+This choice was done since we believe that if not all observations reached such epoch
 (due to early stopping), then it is likely that results for that epoch are noisy
 and hence not meaningful.
  
 
 
-### Actual Test
+### Testing Phase
 
 This is the interesting part of the project, and the one you would execute by
 running `python main.py`: we want to record the train and test 
