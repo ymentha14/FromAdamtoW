@@ -18,7 +18,7 @@
         }
     },
     "SGD": {
-        "num_epochs": 47,
+        "num_epochs": 47    ,
         "param": {
             "lr": 0.01,
             "momentum": 0,
