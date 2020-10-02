@@ -4,7 +4,7 @@ Compare performance in terms of accuracy, stability, and speed of convergence of
 
 ## Report
 
-The technical report is accessible here: [report.pdf](report.pdf)
+The technical report is accessible here: [report.pdf](https://github.com/ymentha14/FromAdamtoW/blob/master/report/report.pdf)
 
 ## Introduction
 
